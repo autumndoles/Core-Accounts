@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<title>Core Games Accounts</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(
+            135deg,
+            #111827,
+            #1e3a8a
+        );
+        color: white;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        padding: 20px;
+    }
+
+    .container {
+        width: min(95%, 450px);
+        background: #1f2937;
+        border: 1px solid #4b5563;
+        border-radius: 12px;
+        padding: 35px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        text-align: center;
+    }
+
+    .logo {
+        font-size: 64px;
+        margin-bottom: 5px;
+    }
+
+    h1 {
+        margin: 0;
+        font-size: 32px;
+    }
+
+    .subtitle {
+        color: #cbd5e1;
+        margin-top: 8px;
+        margin-bottom: 30px;
+    }
+
+    .form-section {
+        text-align: left;
+    }
+
+    label {
+        display: block;
+        margin-top: 15px;
+        margin-bottom: 5px;
+        color: #e5e7eb;
+        font-weight: bold;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #6b7280;
+        background: #111827;
+        color: white;
+        font-size: 16px;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #60a5fa;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        margin-top: 15px;
+
+        border: none;
+        border-radius: 6px;
+
+        font-size: 16px;
+        font-weight: bold;
+
+        cursor: pointer;
+
+        background: #2563eb;
+        color: white;
+    }
+
+    button:hover {
+        background: #1d4ed8;
+    }
+
+    .secondary-button {
+        background: #374151;
+    }
+
+    .secondary-button:hover {
+        background: #4b5563;
+    }
+
+    .link-button {
+        background: none;
+        color: #60a5fa;
+        padding: 5px;
+        margin-top: 15px;
+    }
+
+    .link-button:hover {
+        background: none;
+        text-decoration: underline;
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 25px 0;
+        color: #9ca3af;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #4b5563;
+    }
+
+    .message {
+        padding: 10px;
+        margin-top: 15px;
+        border-radius: 6px;
+        display: none;
+    }
+
+    .error {
+        background: #7f1d1d;
+        color: #fecaca;
+    }
+
+    .success {
+        background: #14532d;
+        color: #bbf7d0;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    .footer {
+        margin-top: 25px;
+        color: #9ca3af;
+        font-size: 12px;
+    }
+</style>
+```
+
+</head>
+
+<body>
+
+<div class="container">
+
+```
+<div class="logo">
+    🎮
+</div>
+
+<h1>Core Games</h1>
+
+<p class="subtitle">
+    Your account for the Core Games universe.
+</p>
+
+<!-- LOGIN -->
+
+<div id="loginSection">
+
+    <h2>Log In</h2>
+
+    <div class="form-section">
+
+        <label for="loginUsername">
+            Username
+        </label>
+
+        <input
+            id="loginUsername"
+            type="text"
+            maxlength="20"
+            placeholder="Enter your username"
+            autocomplete="username"
+        >
+
+        <label for="loginPassword">
+            Password
+        </label>
+
+        <input
+            id="loginPassword"
+            type="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+        >
+
+        <button onclick="login()">
+            Log In
+        </button>
+
+    </div>
+
+    <div
+        id="loginMessage"
+        class="message"
+    ></div>
+
+    <div class="divider">
+        OR
+    </div>
+
+    <button
+        class="secondary-button"
+        onclick="showRegister()"
+    >
+        Create a Core Games Account
+    </button>
+
+</div>
+
+<!-- REGISTER -->
+
+<div
+    id="registerSection"
+    class="hidden"
+>
+
+    <h2>Create Account</h2>
+
+    <div class="form-section">
+
+        <label for="registerUsername">
+            Username
+        </label>
+
+        <input
+            id="registerUsername"
+            type="text"
+            maxlength="20"
+            placeholder="Choose a username"
+            autocomplete="username"
+        >
+
+        <label for="registerPassword">
+            Password
+        </label>
+
+        <input
+            id="registerPassword"
+            type="password"
+            placeholder="Create a password"
+            autocomplete="new-password"
+        >
+
+        <label for="registerConfirmPassword">
+            Confirm Password
+        </label>
+
+        <input
+            id="registerConfirmPassword"
+            type="password"
+            placeholder="Enter your password again"
+            autocomplete="new-password"
+        >
+
+        <button onclick="register()">
+            Create Account
+        </button>
+
+    </div>
+
+    <div
+        id="registerMessage"
+        class="message"
+    ></div>
+
+    <button
+        class="secondary-button"
+        onclick="showLogin()"
+    >
+        Back to Login
+    </button>
+
+</div>
+
+<div class="footer">
+    Core Games Accounts
+</div>
+```
+
+</div>
+
+<script>
+
+/* =========================================================
+   SCREEN SWITCHING
+========================================================= */
+
+function showRegister() {
+
+    document
+        .getElementById("loginSection")
+        .classList.add("hidden");
+
+    document
+        .getElementById("registerSection")
+        .classList.remove("hidden");
+
+    clearMessages();
+
+}
+
+function showLogin() {
+
+    document
+        .getElementById("registerSection")
+        .classList.add("hidden");
+
+    document
+        .getElementById("loginSection")
+        .classList.remove("hidden");
+
+    clearMessages();
+
+}
+
+/* =========================================================
+   MESSAGES
+========================================================= */
+
+function showMessage(
+    elementId,
+    message,
+    type
+) {
+
+    const element =
+        document.getElementById(
+            elementId
+        );
+
+    element.innerText =
+        message;
+
+    element.className =
+        `message ${type}`;
+
+    element.style.display =
+        "block";
+
+}
+
+function clearMessages() {
+
+    [
+        "loginMessage",
+        "registerMessage"
+    ].forEach(id => {
+
+        const element =
+            document.getElementById(id);
+
+        element.innerText =
+            "";
+
+        element.style.display =
+            "none";
+
+    });
+
+}
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+function login() {
+
+    const username =
+        document
+            .getElementById(
+                "loginUsername"
+            )
+            .value
+            .trim();
+
+    const password =
+        document
+            .getElementById(
+                "loginPassword"
+            )
+            .value;
+
+    if (!username) {
+
+        showMessage(
+            "loginMessage",
+            "Please enter your username.",
+            "error"
+        );
+
+        return;
+
+    }
+
+    if (!password) {
+
+        showMessage(
+            "loginMessage",
+            "Please enter your password.",
+            "error"
+        );
+
+        return;
+
+    }
+
+    /*
+        Account authentication will
+        be connected to the Core Games
+        account server here.
+    */
+
+    showMessage(
+        "loginMessage",
+        "The account server is not connected yet.",
+        "error"
+    );
+
+}
+
+/* =========================================================
+   REGISTER
+========================================================= */
+
+function register() {
+
+    const username =
+        document
+            .getElementById(
+                "registerUsername"
+            )
+            .value
+            .trim();
+
+    const password =
+        document
+            .getElementById(
+                "registerPassword"
+            )
+            .value;
+
+    const confirmPassword =
+        document
+            .getElementById(
+                "registerConfirmPassword"
+            )
+            .value;
+
+    if (!username) {
+
+        showMessage(
+            "registerMessage",
+            "Please choose a username.",
+            "error"
+        );
+
+        return;
+
+    }
+
+    if (username.length < 3) {
+
+        showMessage(
+            "registerMessage",
+            "Username must be at least 3 characters.",
+            "error"
+        );
+
+        return;
+
+    }
+
+    if (!password) {
+
+        showMessage(
+            "registerMessage",
+            "Please create a password.",
+            "error"
+        );
+
+        return;
+
+    }
+
+    if (password.length < 8) {
+
+        showMessage(
+            "registerMessage",
+            "Password must be at least 8 characters.",
+            "error"
+        );
+
+        return;
+
+    }
+
+    if (
+        password !==
+        confirmPassword
+    ) {
+
+        showMessage(
+            "registerMessage",
+            "Passwords do not match.",
+            "error"
+        );
+
+        return;
+
+    }
+
+    /*
+        Account creation will
+        be connected to the Core Games
+        account server here.
+    */
+
+    showMessage(
+        "registerMessage",
+        "The account server is not connected yet.",
+        "error"
+    );
+
+}
+
+</script>
+
+</body>
+</html>
