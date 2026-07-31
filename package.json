@@ -1,0 +1,13 @@
+{
+  "name": "core-games-accounts",
+  "version": "1.0.0",
+  "description": "Core Games account system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "bcrypt": "^6.0.0"
+  }
+}
