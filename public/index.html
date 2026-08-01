@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -506,6 +507,7 @@ button {
 
 .chat-message-text {
     word-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 .chat-input-area {
@@ -583,6 +585,7 @@ button {
 }
 
 @media (max-width: 650px) {
+
     body {
         padding: 15px;
     }
@@ -646,9 +649,15 @@ button {
 <div class="container">
 
 <div class="logo-area">
+
     <div class="logo">C</div>
+
     <h1>Core Games</h1>
-    <p>Your account for the Core Games ecosystem.</p>
+
+    <p>
+        Your account for the Core Games ecosystem.
+    </p>
+
 </div>
 
 <div class="card">
@@ -657,12 +666,20 @@ button {
 
 <div class="tabs">
 
-<button id="loginTab" class="tab active" onclick="showLogin()">
-    Login
+<button
+id="loginTab"
+class="tab active"
+onclick="showLogin()"
+>
+Login
 </button>
 
-<button id="registerTab" class="tab" onclick="showRegister()">
-    Register
+<button
+id="registerTab"
+class="tab"
+onclick="showRegister()"
+>
+Register
 </button>
 
 </div>
@@ -671,9 +688,13 @@ button {
 
 <h2>Welcome Back</h2>
 
-<p>Log in to your Core Games account.</p>
+<p>
+    Log in to your Core Games account.
+</p>
 
-<label for="loginUsername">Username</label>
+<label for="loginUsername">
+    Username
+</label>
 
 <input
 id="loginUsername"
@@ -683,7 +704,9 @@ autocomplete="username"
 placeholder="Enter your username"
 >
 
-<label for="loginPassword">Password</label>
+<label for="loginPassword">
+    Password
+</label>
 
 <input
 id="loginPassword"
@@ -692,11 +715,18 @@ autocomplete="current-password"
 placeholder="Enter your password"
 >
 
-<button id="loginButton" class="submit-button" onclick="login()">
-    Login
+<button
+id="loginButton"
+class="submit-button"
+onclick="login()"
+>
+Login
 </button>
 
-<div id="loginMessage" class="message"></div>
+<div
+id="loginMessage"
+class="message"
+></div>
 
 </div>
 
@@ -704,9 +734,13 @@ placeholder="Enter your password"
 
 <h2>Create Account</h2>
 
-<p>Create your Core Games account.</p>
+<p>
+    Create your Core Games account.
+</p>
 
-<label for="registerUsername">Username</label>
+<label for="registerUsername">
+    Username
+</label>
 
 <input
 id="registerUsername"
@@ -716,7 +750,9 @@ autocomplete="username"
 placeholder="Choose a username"
 >
 
-<label for="registerPassword">Password</label>
+<label for="registerPassword">
+    Password
+</label>
 
 <input
 id="registerPassword"
@@ -725,7 +761,9 @@ autocomplete="new-password"
 placeholder="At least 8 characters"
 >
 
-<label for="registerPasswordConfirm">Confirm Password</label>
+<label for="registerPasswordConfirm">
+    Confirm Password
+</label>
 
 <input
 id="registerPasswordConfirm"
@@ -734,17 +772,27 @@ autocomplete="new-password"
 placeholder="Enter your password again"
 >
 
-<button id="registerButton" class="submit-button" onclick="register()">
-    Create Account
+<button
+id="registerButton"
+class="submit-button"
+onclick="register()"
+>
+Create Account
 </button>
 
-<div id="registerMessage" class="message"></div>
+<div
+id="registerMessage"
+class="message"
+></div>
 
 </div>
 
 </div>
 
-<div id="accountPanel" class="account-panel">
+<div
+id="accountPanel"
+class="account-panel"
+>
 
 <div class="social-nav">
 
@@ -778,21 +826,34 @@ Messages
 
 </div>
 
-<div id="profilePage" class="social-page active">
+<div
+id="profilePage"
+class="social-page active"
+>
 
 <div class="profile-header">
 
-<div class="account-icon">C</div>
+<div class="account-icon">
+    C
+</div>
 
 <div class="profile-info">
 
-<h2>Welcome to Core Games</h2>
+<h2>
+    Welcome to Core Games
+</h2>
 
-<div id="accountUsername" class="profile-username">
+<div
+id="accountUsername"
+class="profile-username"
+>
     Username
 </div>
 
-<div id="profileOnlineStatus" class="profile-status">
+<div
+id="profileOnlineStatus"
+class="profile-status"
+>
     ● Online
 </div>
 
@@ -800,11 +861,15 @@ Messages
 
 </div>
 
-<h2>Your Core Games Account</h2>
+<h2>
+    Your Core Games Account
+</h2>
 
 <p class="social-page-description">
+
     This account connects you to the Core Games ecosystem.
     Add friends and chat with other Core Games players.
+
 </p>
 
 <button
@@ -822,16 +887,26 @@ onclick="logout()"
 Log Out
 </button>
 
-<div id="logoutMessage" class="message"></div>
+<div
+id="logoutMessage"
+class="message"
+></div>
 
 </div>
 
-<div id="friendsPage" class="social-page">
+<div
+id="friendsPage"
+class="social-page"
+>
 
-<h2>Friends</h2>
+<h2>
+    Friends
+</h2>
 
 <p class="social-page-description">
+
     Search for another Core Games account to send a friend request.
+
 </p>
 
 <div class="friend-search">
@@ -854,53 +929,88 @@ Add Friend
 
 </div>
 
-<div id="friendSearchMessage" class="message"></div>
+<div
+id="friendSearchMessage"
+class="message"
+></div>
 
-<div id="searchResults" class="search-results"></div>
+<div
+id="searchResults"
+class="search-results"
+></div>
 
-<h3>Your Friends</h3>
+<h3>
+    Your Friends
+</h3>
 
-<div id="friendsList" class="friends-list">
+<div
+id="friendsList"
+class="friends-list"
+>
 
 <div class="empty-state">
-    You don't have any friends yet. Add someone to get started!
-</div>
+
+    You don't have any friends yet.
+    Add someone to get started!
 
 </div>
 
 </div>
 
-<div id="requestsPage" class="social-page">
+</div>
 
-<h2>Friend Requests</h2>
+<div
+id="requestsPage"
+class="social-page"
+>
+
+<h2>
+    Friend Requests
+</h2>
 
 <p class="social-page-description">
+
     Manage your incoming friend requests.
+
 </p>
 
-<div id="requestList" class="request-list">
+<div
+id="requestList"
+class="request-list"
+>
 
 <div class="empty-state">
+
     You don't have any pending friend requests.
-</div>
 
 </div>
 
 </div>
 
-<div id="chatPage" class="social-page">
+</div>
 
-<h2>Messages</h2>
+<div
+id="chatPage"
+class="social-page"
+>
+
+<h2>
+    Messages
+</h2>
 
 <p class="social-page-description">
+
     Chat privately with your Core Games friends.
+
 </p>
 
 <div class="chat-layout">
 
 <div class="chat-friends">
 
-<h3>Friends</h3>
+<h3>
+    Friends
+</h3>
 
 <div id="chatFriendsList">
 
@@ -914,14 +1024,22 @@ Add Friend
 
 <div class="chat-window">
 
-<div id="chatHeader" class="chat-header">
+<div
+id="chatHeader"
+class="chat-header"
+>
     Select a friend
 </div>
 
-<div id="chatMessages" class="chat-messages">
+<div
+id="chatMessages"
+class="chat-messages"
+>
 
 <div class="chat-empty">
+
     Add a friend to start chatting.
+
 </div>
 
 </div>
@@ -960,7 +1078,10 @@ Send
 
 <div class="server-status">
 
-<span id="statusDot" class="status-dot"></span>
+<span
+id="statusDot"
+class="status-dot"
+></span>
 
 <span id="statusText">
     Checking account server...
@@ -969,7 +1090,9 @@ Send
 </div>
 
 <div class="footer">
+
     Core Games Accounts
+
 </div>
 
 </div>
@@ -979,9 +1102,15 @@ Send
 <script>
 
 let currentUsername = null;
+
+let currentAccountId = null;
+
 let currentFriends = [];
+
 let selectedChatFriend = null;
+
 let socket = null;
+
 let pendingSearchResults = [];
 
 
@@ -989,16 +1118,24 @@ let pendingSearchResults = [];
 MESSAGES
 ========================================================= */
 
-function showMessage(elementId, message, type) {
+function showMessage(
+    elementId,
+    message,
+    type
+) {
 
-    const element = document.getElementById(elementId);
+    const element =
+        document.getElementById(elementId);
 
     if (!element) {
         return;
     }
 
-    element.innerText = message;
-    element.className = "message " + type;
+    element.innerText =
+        message;
+
+    element.className =
+        "message " + type;
 
 }
 
@@ -1006,19 +1143,30 @@ function showMessage(elementId, message, type) {
 function clearMessages() {
 
     const messages = [
+
         "loginMessage",
+
         "registerMessage",
+
         "logoutMessage",
+
         "friendSearchMessage"
+
     ];
 
     messages.forEach(function(id) {
 
-        const element = document.getElementById(id);
+        const element =
+            document.getElementById(id);
 
         if (element) {
-            element.className = "message";
-            element.innerText = "";
+
+            element.className =
+                "message";
+
+            element.innerText =
+                "";
+
         }
 
     });
@@ -1032,11 +1180,21 @@ LOGIN / REGISTER TABS
 
 function showLogin() {
 
-    document.getElementById("loginForm").classList.add("active");
-    document.getElementById("registerForm").classList.remove("active");
+    document
+        .getElementById("loginForm")
+        .classList.add("active");
 
-    document.getElementById("loginTab").classList.add("active");
-    document.getElementById("registerTab").classList.remove("active");
+    document
+        .getElementById("registerForm")
+        .classList.remove("active");
+
+    document
+        .getElementById("loginTab")
+        .classList.add("active");
+
+    document
+        .getElementById("registerTab")
+        .classList.remove("active");
 
     clearMessages();
 
@@ -1045,11 +1203,21 @@ function showLogin() {
 
 function showRegister() {
 
-    document.getElementById("registerForm").classList.add("active");
-    document.getElementById("loginForm").classList.remove("active");
+    document
+        .getElementById("registerForm")
+        .classList.add("active");
 
-    document.getElementById("registerTab").classList.add("active");
-    document.getElementById("loginTab").classList.remove("active");
+    document
+        .getElementById("loginForm")
+        .classList.remove("active");
+
+    document
+        .getElementById("registerTab")
+        .classList.add("active");
+
+    document
+        .getElementById("loginTab")
+        .classList.remove("active");
 
     clearMessages();
 
@@ -1060,56 +1228,103 @@ function showRegister() {
 SOCIAL NAVIGATION
 ========================================================= */
 
-function showSocialPage(pageId, button) {
+function showSocialPage(
+    pageId,
+    button
+) {
 
-    document.querySelectorAll(".social-page").forEach(function(page) {
-        page.classList.remove("active");
-    });
+    document
+        .querySelectorAll(".social-page")
+        .forEach(function(page) {
 
-    document.querySelectorAll(".social-nav-button").forEach(function(navButton) {
-        navButton.classList.remove("active");
-    });
+            page.classList.remove("active");
 
-    const page = document.getElementById(pageId);
+        });
+
+
+    document
+        .querySelectorAll(".social-nav-button")
+        .forEach(function(navButton) {
+
+            navButton.classList.remove("active");
+
+        });
+
+
+    const page =
+        document.getElementById(pageId);
+
 
     if (page) {
+
         page.classList.add("active");
+
     }
+
 
     if (button) {
+
         button.classList.add("active");
+
     }
+
 
     if (pageId === "friendsPage") {
+
         loadFriends();
+
     }
+
 
     if (pageId === "requestsPage") {
+
         loadFriendRequests();
+
     }
 
+
     if (pageId === "chatPage") {
+
         loadChatFriends();
+
     }
 
 }
 
 
-function showSocialPageById(pageId) {
+function showSocialPageById(
+    pageId
+) {
 
-    let matchingButton = null;
+    let matchingButton =
+        null;
 
-    document.querySelectorAll(".social-nav-button").forEach(function(button) {
 
-        const onclick = button.getAttribute("onclick");
+    document
+        .querySelectorAll(".social-nav-button")
+        .forEach(function(button) {
 
-        if (onclick && onclick.includes(pageId)) {
-            matchingButton = button;
-        }
+            const onclick =
+                button.getAttribute("onclick");
 
-    });
 
-    showSocialPage(pageId, matchingButton);
+            if (
+                onclick &&
+                onclick.includes(pageId)
+            ) {
+
+                matchingButton =
+                    button;
+
+            }
+
+        });
+
+
+    showSocialPage(
+        pageId,
+        matchingButton
+    );
 
 }
 
@@ -1121,16 +1336,28 @@ REGISTER
 async function register() {
 
     const username =
-        document.getElementById("registerUsername").value.trim();
+        document
+            .getElementById("registerUsername")
+            .value
+            .trim();
+
 
     const password =
-        document.getElementById("registerPassword").value;
+        document
+            .getElementById("registerPassword")
+            .value;
+
 
     const confirmPassword =
-        document.getElementById("registerPasswordConfirm").value;
+        document
+            .getElementById("registerPasswordConfirm")
+            .value;
+
 
     const button =
-        document.getElementById("registerButton");
+        document.getElementById(
+            "registerButton"
+        );
 
 
     if (!username) {
@@ -1159,6 +1386,19 @@ async function register() {
     }
 
 
+    if (password.length < 8) {
+
+        showMessage(
+            "registerMessage",
+            "Password must be at least 8 characters.",
+            "error"
+        );
+
+        return;
+
+    }
+
+
     if (password !== confirmPassword) {
 
         showMessage(
@@ -1172,41 +1412,52 @@ async function register() {
     }
 
 
-    button.disabled = true;
-    button.innerText = "Creating Account...";
+    button.disabled =
+        true;
+
+    button.innerText =
+        "Creating Account...";
 
 
     try {
 
-        const response = await fetch(
-            "/api/register",
-            {
-                method: "POST",
+        const response =
+            await fetch(
+                "/api/register",
+                {
+                    method: "POST",
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            }
-        );
+                    body:
+                        JSON.stringify({
+                            username,
+                            password
+                        })
+                }
+            );
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (data.success) {
 
-            showAccount(data.username);
+            showAccount(
+                data.username,
+                data.id
+            );
 
         } else {
 
             showMessage(
                 "registerMessage",
-                data.message || "Unable to create account.",
+                data.message ||
+                    "Unable to create account.",
                 "error"
             );
 
@@ -1214,7 +1465,11 @@ async function register() {
 
     } catch (error) {
 
-        console.error("Registration error:", error);
+        console.error(
+            "Registration error:",
+            error
+        );
+
 
         showMessage(
             "registerMessage",
@@ -1225,8 +1480,11 @@ async function register() {
     }
 
 
-    button.disabled = false;
-    button.innerText = "Create Account";
+    button.disabled =
+        false;
+
+    button.innerText =
+        "Create Account";
 
 }
 
@@ -1238,20 +1496,29 @@ LOGIN
 async function login() {
 
     const username =
-        document.getElementById("loginUsername").value.trim();
+        document
+            .getElementById("loginUsername")
+            .value
+            .trim();
+
 
     const password =
-        document.getElementById("loginPassword").value;
+        document
+            .getElementById("loginPassword")
+            .value;
+
 
     const button =
-        document.getElementById("loginButton");
+        document.getElementById(
+            "loginButton"
+        );
 
 
     if (!username) {
 
         showMessage(
             "loginMessage",
-            "Please enter your username.",
+            "Please enter a username.",
             "error"
         );
 
@@ -1264,7 +1531,7 @@ async function login() {
 
         showMessage(
             "loginMessage",
-            "Please enter your password.",
+            "Please enter a password.",
             "error"
         );
 
@@ -1273,41 +1540,52 @@ async function login() {
     }
 
 
-    button.disabled = true;
-    button.innerText = "Logging In...";
+    button.disabled =
+        true;
+
+    button.innerText =
+        "Logging In...";
 
 
     try {
 
-        const response = await fetch(
-            "/api/login",
-            {
-                method: "POST",
+        const response =
+            await fetch(
+                "/api/login",
+                {
+                    method: "POST",
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            }
-        );
+                    body:
+                        JSON.stringify({
+                            username,
+                            password
+                        })
+                }
+            );
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (data.success) {
 
-            showAccount(data.username);
+            showAccount(
+                data.username,
+                data.id
+            );
 
         } else {
 
             showMessage(
                 "loginMessage",
-                data.message || "Unable to log in.",
+                data.message ||
+                    "Unable to log in.",
                 "error"
             );
 
@@ -1315,7 +1593,11 @@ async function login() {
 
     } catch (error) {
 
-        console.error("Login error:", error);
+        console.error(
+            "Login error:",
+            error
+        );
+
 
         showMessage(
             "loginMessage",
@@ -1326,8 +1608,11 @@ async function login() {
     }
 
 
-    button.disabled = false;
-    button.innerText = "Login";
+    button.disabled =
+        false;
+
+    button.innerText =
+        "Login";
 
 }
 
@@ -1336,20 +1621,50 @@ async function login() {
 SHOW ACCOUNT
 ========================================================= */
 
-function showAccount(username) {
+async function showAccount(
+    username,
+    accountId
+) {
 
-    currentUsername = username;
+    currentUsername =
+        username;
 
-    document.getElementById("authArea").style.display = "none";
 
-    document.getElementById("accountPanel").classList.add("active");
+    if (accountId) {
 
-    document.getElementById("accountUsername").innerText = username;
+        currentAccountId =
+            accountId;
+
+    } else {
+
+        await loadCurrentAccount();
+
+    }
+
+
+    document
+        .getElementById("authArea")
+        .style.display =
+            "none";
+
+
+    document
+        .getElementById("accountPanel")
+        .classList.add("active");
+
+
+    document
+        .getElementById("accountUsername")
+        .innerText =
+            username;
+
 
     connectSocket();
 
-    loadFriends();
-    loadFriendRequests();
+
+    await loadFriends();
+
+    await loadFriendRequests();
 
 }
 
@@ -1360,18 +1675,40 @@ SHOW AUTH
 
 function showAuthArea() {
 
-    currentUsername = null;
+    currentUsername =
+        null;
 
-    document.getElementById("authArea").style.display = "block";
 
-    document.getElementById("accountPanel").classList.remove("active");
+    currentAccountId =
+        null;
 
-    currentFriends = [];
-    selectedChatFriend = null;
+
+    document
+        .getElementById("authArea")
+        .style.display =
+            "block";
+
+
+    document
+        .getElementById("accountPanel")
+        .classList.remove("active");
+
+
+    currentFriends =
+        [];
+
+
+    selectedChatFriend =
+        null;
+
 
     if (socket) {
+
         socket.disconnect();
-        socket = null;
+
+        socket =
+            null;
+
     }
 
 }
@@ -1384,36 +1721,45 @@ LOGOUT
 async function logout() {
 
     const button =
-        document.getElementById("logoutButton");
+        document.getElementById(
+            "logoutButton"
+        );
 
 
-    button.disabled = true;
-    button.innerText = "Logging Out...";
+    button.disabled =
+        true;
+
+    button.innerText =
+        "Logging Out...";
 
 
     try {
 
-        const response = await fetch(
-            "/api/logout",
-            {
-                method: "POST"
-            }
-        );
+        const response =
+            await fetch(
+                "/api/logout",
+                {
+                    method: "POST"
+                }
+            );
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (data.success) {
 
             showAuthArea();
+
             showLogin();
 
         } else {
 
             showMessage(
                 "logoutMessage",
-                data.message || "Unable to log out.",
+                data.message ||
+                    "Unable to log out.",
                 "error"
             );
 
@@ -1421,7 +1767,11 @@ async function logout() {
 
     } catch (error) {
 
-        console.error("Logout error:", error);
+        console.error(
+            "Logout error:",
+            error
+        );
+
 
         showMessage(
             "logoutMessage",
@@ -1432,8 +1782,11 @@ async function logout() {
     }
 
 
-    button.disabled = false;
-    button.innerText = "Log Out";
+    button.disabled =
+        false;
+
+    button.innerText =
+        "Log Out";
 
 }
 
@@ -1445,21 +1798,35 @@ SEARCH USERS
 async function searchFriendUsers() {
 
     const input =
-        document.getElementById("friendSearchInput");
+        document.getElementById(
+            "friendSearchInput"
+        );
+
 
     const query =
         input.value.trim();
 
+
     const resultsContainer =
-        document.getElementById("searchResults");
+        document.getElementById(
+            "searchResults"
+        );
 
 
     if (query.length < 2) {
 
-        resultsContainer.innerHTML = "";
-        resultsContainer.classList.remove("active");
+        resultsContainer.innerHTML =
+            "";
 
-        pendingSearchResults = [];
+
+        resultsContainer.classList.remove(
+            "active"
+        );
+
+
+        pendingSearchResults =
+            [];
+
 
         return;
 
@@ -1468,20 +1835,27 @@ async function searchFriendUsers() {
 
     try {
 
-        const response = await fetch(
-            "/api/users/search?q=" +
-            encodeURIComponent(query)
-        );
+        const response =
+            await fetch(
+                "/api/users/search?q=" +
+                encodeURIComponent(query)
+            );
 
 
         if (!response.ok) {
+
             return;
+
         }
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
-        pendingSearchResults = data.users || [];
+
+        pendingSearchResults =
+            data.users || [];
+
 
         renderSearchResults();
 
@@ -1504,61 +1878,106 @@ RENDER SEARCH RESULTS
 function renderSearchResults() {
 
     const container =
-        document.getElementById("searchResults");
+        document.getElementById(
+            "searchResults"
+        );
 
 
-    container.innerHTML = "";
+    container.innerHTML =
+        "";
 
 
-    if (pendingSearchResults.length === 0) {
+    if (
+        pendingSearchResults.length ===
+        0
+    ) {
 
         container.innerHTML =
             '<div class="empty-state">No users found.</div>';
 
-        container.classList.add("active");
+
+        container.classList.add(
+            "active"
+        );
+
 
         return;
 
     }
 
 
-    pendingSearchResults.forEach(function(user) {
+    pendingSearchResults.forEach(
+        function(user) {
 
-        const item =
-            document.createElement("div");
-
-        item.className = "search-result";
-
-
-        const name =
-            document.createElement("span");
-
-        name.className = "search-result-name";
-
-        name.innerText = user.username;
+            const item =
+                document.createElement(
+                    "div"
+                );
 
 
-        const button =
-            document.createElement("button");
-
-        button.className = "small-button";
-
-        button.innerText = "Add Friend";
-
-        button.onclick = function() {
-            sendFriendRequest(user.username);
-        };
+            item.className =
+                "search-result";
 
 
-        item.appendChild(name);
-        item.appendChild(button);
-
-        container.appendChild(item);
-
-    });
+            const name =
+                document.createElement(
+                    "span"
+                );
 
 
-    container.classList.add("active");
+            name.className =
+                "search-result-name";
+
+
+            name.innerText =
+                user.username;
+
+
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+
+            button.className =
+                "small-button";
+
+
+            button.innerText =
+                "Add Friend";
+
+
+            button.onclick =
+                function() {
+
+                    sendFriendRequest(
+                        user.username
+                    );
+
+                };
+
+
+            item.appendChild(
+                name
+            );
+
+
+            item.appendChild(
+                button
+            );
+
+
+            container.appendChild(
+                item
+            );
+
+        }
+    );
+
+
+    container.classList.add(
+        "active"
+    );
 
 }
 
@@ -1570,7 +1989,10 @@ ADD FRIEND
 async function searchFriend() {
 
     const input =
-        document.getElementById("friendSearchInput");
+        document.getElementById(
+            "friendSearchInput"
+        );
+
 
     const username =
         input.value.trim();
@@ -1584,12 +2006,15 @@ async function searchFriend() {
             "error"
         );
 
+
         return;
 
     }
 
 
-    await sendFriendRequest(username);
+    await sendFriendRequest(
+        username
+    );
 
 }
 
@@ -1598,56 +2023,81 @@ async function searchFriend() {
 SEND FRIEND REQUEST
 ========================================================= */
 
-async function sendFriendRequest(username) {
+async function sendFriendRequest(
+    username
+) {
 
     try {
 
-        const response = await fetch(
-            "/api/friends/request",
-            {
-                method: "POST",
+        const response =
+            await fetch(
+                "/api/friends/request",
+                {
+                    method: "POST",
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                body: JSON.stringify({
-                    username
-                })
-            }
-        );
+                    body:
+                        JSON.stringify({
+                            username
+                        })
+                }
+            );
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (data.success) {
 
             showMessage(
                 "friendSearchMessage",
-                "Friend request sent to " + username + "!",
+                "Friend request sent to " +
+                    username +
+                    "!",
                 "success"
             );
 
-            document.getElementById(
-                "friendSearchInput"
-            ).value = "";
 
-            document.getElementById(
-                "searchResults"
-            ).innerHTML = "";
+            document
+                .getElementById(
+                    "friendSearchInput"
+                )
+                .value =
+                    "";
 
-            document.getElementById(
-                "searchResults"
-            ).classList.remove("active");
 
-            pendingSearchResults = [];
+            document
+                .getElementById(
+                    "searchResults"
+                )
+                .innerHTML =
+                    "";
+
+
+            document
+                .getElementById(
+                    "searchResults"
+                )
+                .classList.remove(
+                    "active"
+                );
+
+
+            pendingSearchResults =
+                [];
+
 
         } else {
 
             showMessage(
                 "friendSearchMessage",
-                data.message || "Unable to send friend request.",
+                data.message ||
+                    "Unable to send friend request.",
                 "error"
             );
 
@@ -1659,6 +2109,7 @@ async function sendFriendRequest(username) {
             "Friend request error:",
             error
         );
+
 
         showMessage(
             "friendSearchMessage",
@@ -1679,19 +2130,26 @@ async function loadFriends() {
 
     try {
 
-        const response = await fetch(
-            "/api/friends"
-        );
+        const response =
+            await fetch(
+                "/api/friends"
+            );
 
 
         if (!response.ok) {
+
             return;
+
         }
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
-        currentFriends = data.friends || [];
+
+        currentFriends =
+            data.friends || [];
+
 
         renderFriends();
 
@@ -1716,136 +2174,226 @@ RENDER FRIENDS
 function renderFriends() {
 
     const container =
-        document.getElementById("friendsList");
+        document.getElementById(
+            "friendsList"
+        );
 
 
-    container.innerHTML = "";
+    container.innerHTML =
+        "";
 
 
-    if (currentFriends.length === 0) {
+    if (
+        currentFriends.length ===
+        0
+    ) {
 
         container.innerHTML =
             '<div class="empty-state">You don\'t have any friends yet. Add someone to get started!</div>';
+
 
         return;
 
     }
 
 
-    currentFriends.forEach(function(friend) {
+    currentFriends.forEach(
+        function(friend) {
 
-        const item =
-            document.createElement("div");
-
-        item.className = "friend-item";
-
-
-        const user =
-            document.createElement("div");
-
-        user.className = "friend-user";
+            const item =
+                document.createElement(
+                    "div"
+                );
 
 
-        const avatar =
-            document.createElement("div");
-
-        avatar.className = "friend-avatar";
-
-        avatar.innerText =
-            friend.username.charAt(0).toUpperCase();
+            item.className =
+                "friend-item";
 
 
-        const info =
-            document.createElement("div");
+            const user =
+                document.createElement(
+                    "div"
+                );
 
 
-        const name =
-            document.createElement("div");
-
-        name.className = "friend-name";
-
-        name.innerText =
-            friend.username;
+            user.className =
+                "friend-user";
 
 
-        const status =
-            document.createElement("div");
-
-        status.className = "friend-status";
-
-        status.id =
-            "friend-status-" + friend.id;
-
-        status.innerText =
-            "Offline";
+            const avatar =
+                document.createElement(
+                    "div"
+                );
 
 
-        info.appendChild(name);
-        info.appendChild(status);
-
-        user.appendChild(avatar);
-        user.appendChild(info);
+            avatar.className =
+                "friend-avatar";
 
 
-        const actions =
-            document.createElement("div");
-
-        actions.className = "friend-actions";
-
-
-        const chatButton =
-            document.createElement("button");
-
-        chatButton.className =
-            "friend-action-button";
-
-        chatButton.innerText =
-            "Message";
-
-        chatButton.onclick = function() {
-
-            showSocialPageById("chatPage");
-
-            selectChatFriend(friend);
-
-        };
+            avatar.innerText =
+                friend.username
+                    .charAt(0)
+                    .toUpperCase();
 
 
-        const removeButton =
-            document.createElement("button");
-
-        removeButton.className =
-            "friend-action-button";
-
-        removeButton.innerText =
-            "Remove";
-
-        removeButton.onclick = function() {
-
-            removeFriend(friend.id);
-
-        };
+            const info =
+                document.createElement(
+                    "div"
+                );
 
 
-        actions.appendChild(chatButton);
-        actions.appendChild(removeButton);
-
-        item.appendChild(user);
-        item.appendChild(actions);
-
-        container.appendChild(item);
+            const name =
+                document.createElement(
+                    "div"
+                );
 
 
-        if (socket) {
+            name.className =
+                "friend-name";
 
-            socket.emit(
-                "getPresence",
-                friend.id
+
+            name.innerText =
+                friend.username;
+
+
+            const status =
+                document.createElement(
+                    "div"
+                );
+
+
+            status.className =
+                "friend-status";
+
+
+            status.id =
+                "friend-status-" +
+                friend.id;
+
+
+            status.innerText =
+                "Offline";
+
+
+            info.appendChild(
+                name
             );
 
-        }
 
-    });
+            info.appendChild(
+                status
+            );
+
+
+            user.appendChild(
+                avatar
+            );
+
+
+            user.appendChild(
+                info
+            );
+
+
+            const actions =
+                document.createElement(
+                    "div"
+                );
+
+
+            actions.className =
+                "friend-actions";
+
+
+            const chatButton =
+                document.createElement(
+                    "button"
+                );
+
+
+            chatButton.className =
+                "friend-action-button";
+
+
+            chatButton.innerText =
+                "Message";
+
+
+            chatButton.onclick =
+                function() {
+
+                    showSocialPageById(
+                        "chatPage"
+                    );
+
+
+                    selectChatFriend(
+                        friend
+                    );
+
+                };
+
+
+            const removeButton =
+                document.createElement(
+                    "button"
+                );
+
+
+            removeButton.className =
+                "friend-action-button";
+
+
+            removeButton.innerText =
+                "Remove";
+
+
+            removeButton.onclick =
+                function() {
+
+                    removeFriend(
+                        friend.id
+                    );
+
+                };
+
+
+            actions.appendChild(
+                chatButton
+            );
+
+
+            actions.appendChild(
+                removeButton
+            );
+
+
+            item.appendChild(
+                user
+            );
+
+
+            item.appendChild(
+                actions
+            );
+
+
+            container.appendChild(
+                item
+            );
+
+
+            if (socket) {
+
+                socket.emit(
+                    "getPresence",
+                    friend.id
+                );
+
+            }
+
+        }
+    );
 
 }
 
@@ -1854,41 +2402,81 @@ function renderFriends() {
 REMOVE FRIEND
 ========================================================= */
 
-async function removeFriend(friendId) {
+async function removeFriend(
+    friendId
+) {
 
-    if (!confirm("Are you sure you want to remove this friend?")) {
+    if (
+        !confirm(
+            "Are you sure you want to remove this friend?"
+        )
+    ) {
+
         return;
+
     }
 
 
     try {
 
-        const response = await fetch(
-            "/api/friends/" + friendId,
-            {
-                method: "DELETE"
-            }
-        );
+        const response =
+            await fetch(
+                "/api/friends/" +
+                friendId,
+                {
+                    method: "DELETE"
+                }
+            );
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (data.success) {
 
             if (
                 selectedChatFriend &&
-                selectedChatFriend.id === friendId
+                selectedChatFriend.id ===
+                    friendId
             ) {
-                selectedChatFriend = null;
+
+                selectedChatFriend =
+                    null;
+
+                document
+                    .getElementById(
+                        "chatHeader"
+                    )
+                    .innerText =
+                        "Select a friend";
+
+
+                document
+                    .getElementById(
+                        "chatInput"
+                    )
+                    .disabled =
+                        true;
+
+
+                document
+                    .getElementById(
+                        "sendMessageButton"
+                    )
+                    .disabled =
+                        true;
+
             }
+
 
             await loadFriends();
 
         } else {
 
             alert(
-                data.message || "Unable to remove friend."
+                data.message ||
+                    "Unable to remove friend."
             );
 
         }
@@ -1899,6 +2487,7 @@ async function removeFriend(friendId) {
             "Remove friend error:",
             error
         );
+
 
         alert(
             "Unable to connect to the account server."
@@ -1917,17 +2506,22 @@ async function loadFriendRequests() {
 
     try {
 
-        const response = await fetch(
-            "/api/friends/requests"
-        );
+        const response =
+            await fetch(
+                "/api/friends/requests"
+            );
 
 
         if (!response.ok) {
+
             return;
+
         }
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
+
 
         renderFriendRequests(
             data.requests || []
@@ -1949,91 +2543,147 @@ async function loadFriendRequests() {
 RENDER FRIEND REQUESTS
 ========================================================= */
 
-function renderFriendRequests(requests) {
+function renderFriendRequests(
+    requests
+) {
 
     const container =
-        document.getElementById("requestList");
+        document.getElementById(
+            "requestList"
+        );
 
 
-    container.innerHTML = "";
+    container.innerHTML =
+        "";
 
 
-    if (requests.length === 0) {
+    if (
+        requests.length ===
+        0
+    ) {
 
         container.innerHTML =
             '<div class="empty-state">You don\'t have any pending friend requests.</div>';
+
 
         return;
 
     }
 
 
-    requests.forEach(function(request) {
+    requests.forEach(
+        function(request) {
 
-        const item =
-            document.createElement("div");
-
-        item.className = "request-item";
-
-
-        const text =
-            document.createElement("div");
-
-        text.innerHTML =
-            "<strong>" +
-            escapeHtml(request.username) +
-            "</strong> wants to be your friend.";
+            const item =
+                document.createElement(
+                    "div"
+                );
 
 
-        const actions =
-            document.createElement("div");
-
-        actions.className = "request-actions";
+            item.className =
+                "request-item";
 
 
-        const accept =
-            document.createElement("button");
+            const text =
+                document.createElement(
+                    "div"
+                );
 
-        accept.className = "accept-button";
 
-        accept.innerText = "Accept";
+            text.innerHTML =
+                "<strong>" +
+                escapeHtml(
+                    request.username
+                ) +
+                "</strong> wants to be your friend.";
 
-        accept.onclick = function() {
 
-            respondToFriendRequest(
-                request.id,
-                "accept"
+            const actions =
+                document.createElement(
+                    "div"
+                );
+
+
+            actions.className =
+                "request-actions";
+
+
+            const accept =
+                document.createElement(
+                    "button"
+                );
+
+
+            accept.className =
+                "accept-button";
+
+
+            accept.innerText =
+                "Accept";
+
+
+            accept.onclick =
+                function() {
+
+                    respondToFriendRequest(
+                        request.id,
+                        "accept"
+                    );
+
+                };
+
+
+            const decline =
+                document.createElement(
+                    "button"
+                );
+
+
+            decline.className =
+                "decline-button";
+
+
+            decline.innerText =
+                "Decline";
+
+
+            decline.onclick =
+                function() {
+
+                    respondToFriendRequest(
+                        request.id,
+                        "decline"
+                    );
+
+                };
+
+
+            actions.appendChild(
+                accept
             );
 
-        };
 
-
-        const decline =
-            document.createElement("button");
-
-        decline.className = "decline-button";
-
-        decline.innerText = "Decline";
-
-        decline.onclick = function() {
-
-            respondToFriendRequest(
-                request.id,
-                "decline"
+            actions.appendChild(
+                decline
             );
 
-        };
+
+            item.appendChild(
+                text
+            );
 
 
-        actions.appendChild(accept);
-        actions.appendChild(decline);
+            item.appendChild(
+                actions
+            );
 
-        item.appendChild(text);
-        item.appendChild(actions);
 
-        container.appendChild(item);
+            container.appendChild(
+                item
+            );
 
-    });
+        }
+    );
 
 }
 
@@ -2049,18 +2699,20 @@ async function respondToFriendRequest(
 
     try {
 
-        const response = await fetch(
-            "/api/friends/requests/" +
-            requestId +
-            "/" +
-            action,
-            {
-                method: "POST"
-            }
-        );
+        const response =
+            await fetch(
+                "/api/friends/requests/" +
+                requestId +
+                "/" +
+                action,
+                {
+                    method: "POST"
+                }
+            );
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (data.success) {
@@ -2073,7 +2725,7 @@ async function respondToFriendRequest(
 
             alert(
                 data.message ||
-                "Unable to process friend request."
+                    "Unable to process friend request."
             );
 
         }
@@ -2084,6 +2736,7 @@ async function respondToFriendRequest(
             "Friend request response error:",
             error
         );
+
 
         alert(
             "Unable to connect to the account server."
@@ -2106,48 +2759,70 @@ function renderChatFriends() {
         );
 
 
-    container.innerHTML = "";
+    container.innerHTML =
+        "";
 
 
-    if (currentFriends.length === 0) {
+    if (
+        currentFriends.length ===
+        0
+    ) {
 
         container.innerHTML =
             '<div class="chat-friend">No friends yet.</div>';
+
 
         return;
 
     }
 
 
-    currentFriends.forEach(function(friend) {
+    currentFriends.forEach(
+        function(friend) {
 
-        const item =
-            document.createElement("div");
-
-        item.className = "chat-friend";
-
-        item.innerText =
-            friend.username;
+            const item =
+                document.createElement(
+                    "div"
+                );
 
 
-        if (
-            selectedChatFriend &&
-            selectedChatFriend.id === friend.id
-        ) {
-            item.classList.add("active");
+            item.className =
+                "chat-friend";
+
+
+            item.innerText =
+                friend.username;
+
+
+            if (
+                selectedChatFriend &&
+                selectedChatFriend.id ===
+                    friend.id
+            ) {
+
+                item.classList.add(
+                    "active"
+                );
+
+            }
+
+
+            item.onclick =
+                function() {
+
+                    selectChatFriend(
+                        friend
+                    );
+
+                };
+
+
+            container.appendChild(
+                item
+            );
+
         }
-
-
-        item.onclick = function() {
-
-            selectChatFriend(friend);
-
-        };
-
-
-        container.appendChild(item);
-
-    });
+    );
 
 }
 
@@ -2156,30 +2831,56 @@ function renderChatFriends() {
 SELECT CHAT FRIEND
 ========================================================= */
 
-async function selectChatFriend(friend) {
+async function selectChatFriend(
+    friend
+) {
 
-    selectedChatFriend = friend;
+    selectedChatFriend =
+        friend;
+
 
     renderChatFriends();
 
 
-    document.getElementById(
-        "chatHeader"
-    ).innerText =
-        "Chat with " + friend.username;
+    document
+        .getElementById(
+            "chatHeader"
+        )
+        .innerText =
+            "Chat with " +
+            friend.username;
 
 
-    document.getElementById(
-        "chatInput"
-    ).disabled = false;
+    document
+        .getElementById(
+            "chatInput"
+        )
+        .disabled =
+            false;
 
 
-    document.getElementById(
-        "sendMessageButton"
-    ).disabled = false;
+    document
+        .getElementById(
+            "sendMessageButton"
+        )
+        .disabled =
+            false;
 
 
-    await loadChatHistory(friend.id);
+    await loadChatHistory(
+        friend.id
+    );
+
+}
+
+
+/* =========================================================
+LOAD CHAT FRIENDS
+========================================================= */
+
+function loadChatFriends() {
+
+    renderChatFriends();
 
 }
 
@@ -2188,7 +2889,9 @@ async function selectChatFriend(friend) {
 LOAD CHAT HISTORY
 ========================================================= */
 
-async function loadChatHistory(friendId) {
+async function loadChatHistory(
+    friendId
+) {
 
     const container =
         document.getElementById(
@@ -2202,12 +2905,15 @@ async function loadChatHistory(friendId) {
 
     try {
 
-        const response = await fetch(
-            "/api/messages/" + friendId
-        );
+        const response =
+            await fetch(
+                "/api/messages/" +
+                friendId
+            );
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
 
         if (!response.ok) {
@@ -2216,9 +2922,10 @@ async function loadChatHistory(friendId) {
                 '<div class="chat-empty">' +
                 escapeHtml(
                     data.message ||
-                    "Unable to load messages."
+                        "Unable to load messages."
                 ) +
                 "</div>";
+
 
             return;
 
@@ -2236,6 +2943,7 @@ async function loadChatHistory(friendId) {
             error
         );
 
+
         container.innerHTML =
             '<div class="chat-empty">Unable to load messages.</div>';
 
@@ -2248,7 +2956,9 @@ async function loadChatHistory(friendId) {
 RENDER CHAT MESSAGES
 ========================================================= */
 
-function renderChatMessages(messages) {
+function renderChatMessages(
+    messages
+) {
 
     const container =
         document.getElementById(
@@ -2256,27 +2966,34 @@ function renderChatMessages(messages) {
         );
 
 
-    container.innerHTML = "";
+    container.innerHTML =
+        "";
 
 
-    if (messages.length === 0) {
+    if (
+        messages.length ===
+        0
+    ) {
 
         container.innerHTML =
             '<div class="chat-empty">No messages yet. Say hello!</div>';
+
 
         return;
 
     }
 
 
-    messages.forEach(function(message) {
+    messages.forEach(
+        function(message) {
 
-        addChatMessageToScreen(
-            message,
-            false
-        );
+            addChatMessageToScreen(
+                message,
+                false
+            );
 
-    });
+        }
+    );
 
 
     container.scrollTop =
@@ -2307,12 +3024,16 @@ function addChatMessageToScreen(
 
 
     if (empty) {
+
         empty.remove();
+
     }
 
 
     const item =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
 
     item.className =
@@ -2320,20 +3041,28 @@ function addChatMessageToScreen(
 
 
     const isMine =
-        message.senderId ===
-        getCurrentAccountId();
+        Number(message.senderId) ===
+        Number(currentAccountId);
 
 
     if (isMine) {
-        item.classList.add("mine");
+
+        item.classList.add(
+            "mine"
+        );
+
     }
 
 
     const author =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     author.className =
         "chat-message-author";
+
 
     author.innerText =
         isMine
@@ -2345,19 +3074,32 @@ function addChatMessageToScreen(
 
 
     const text =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     text.className =
         "chat-message-text";
+
 
     text.innerText =
         message.message;
 
 
-    item.appendChild(author);
-    item.appendChild(text);
+    item.appendChild(
+        author
+    );
 
-    container.appendChild(item);
+
+    item.appendChild(
+        text
+    );
+
+
+    container.appendChild(
+        item
+    );
 
 
     if (scroll) {
@@ -2371,23 +3113,24 @@ function addChatMessageToScreen(
 
 
 /* =========================================================
-CURRENT ACCOUNT ID
-========================================================= */
-
-let currentAccountId = null;
-
-
-/* =========================================================
 GET CURRENT ACCOUNT
 ========================================================= */
 
-async function loadCurrentAccountId() {
+async function loadCurrentAccount() {
 
     try {
 
-        const response = await fetch(
-            "/api/me"
-        );
+        const response =
+            await fetch(
+                "/api/me"
+            );
+
+
+        if (!response.ok) {
+
+            return false;
+
+        }
 
 
         const data =
@@ -2402,6 +3145,16 @@ async function loadCurrentAccountId() {
             currentUsername =
                 data.username;
 
+
+            currentAccountId =
+                data.id ||
+                data.userId ||
+                data.accountId ||
+                null;
+
+
+            return true;
+
         }
 
     } catch (error) {
@@ -2412,6 +3165,9 @@ async function loadCurrentAccountId() {
         );
 
     }
+
+
+    return false;
 
 }
 
@@ -2426,7 +3182,9 @@ function sendMessage() {
         !socket ||
         !selectedChatFriend
     ) {
+
         return;
+
     }
 
 
@@ -2441,7 +3199,9 @@ function sendMessage() {
 
 
     if (!message) {
+
         return;
+
     }
 
 
@@ -2456,7 +3216,8 @@ function sendMessage() {
     );
 
 
-    input.value = "";
+    input.value =
+        "";
 
 }
 
@@ -2468,7 +3229,9 @@ SOCKET.IO
 function connectSocket() {
 
     if (socket) {
+
         return;
+
     }
 
 
@@ -2484,14 +3247,17 @@ function connectSocket() {
                 "Connected to Core Games social server."
             );
 
-            currentFriends.forEach(function(friend) {
 
-                socket.emit(
-                    "getPresence",
-                    friend.id
-                );
+            currentFriends.forEach(
+                function(friend) {
 
-            });
+                    socket.emit(
+                        "getPresence",
+                        friend.id
+                    );
+
+                }
+            );
 
         }
     );
@@ -2509,7 +3275,9 @@ function connectSocket() {
 
 
             if (!status) {
+
                 return;
+
             }
 
 
@@ -2517,6 +3285,7 @@ function connectSocket() {
 
                 status.innerText =
                     "Online";
+
 
                 status.classList.add(
                     "online"
@@ -2526,6 +3295,7 @@ function connectSocket() {
 
                 status.innerText =
                     "Offline";
+
 
                 status.classList.remove(
                     "online"
@@ -2544,13 +3314,13 @@ function connectSocket() {
             if (
                 selectedChatFriend &&
                 (
-                    message.senderId ===
-                    selectedChatFriend.id
+                    Number(message.senderId) ===
+                        Number(selectedChatFriend.id)
 
                     ||
 
-                    message.receiverId ===
-                    selectedChatFriend.id
+                    Number(message.receiverId) ===
+                        Number(selectedChatFriend.id)
                 )
             ) {
 
@@ -2571,7 +3341,7 @@ function connectSocket() {
 
             alert(
                 data.message ||
-                "Unable to send message."
+                    "Unable to send message."
             );
 
         }
@@ -2596,13 +3366,19 @@ function connectSocket() {
 ESCAPE HTML
 ========================================================= */
 
-function escapeHtml(text) {
+function escapeHtml(
+    text
+) {
 
     const div =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     div.innerText =
         text;
+
 
     return div.innerHTML;
 
@@ -2641,8 +3417,20 @@ async function checkLoginSession() {
             data.loggedIn
         ) {
 
+            currentUsername =
+                data.username;
+
+
+            currentAccountId =
+                data.id ||
+                data.userId ||
+                data.accountId ||
+                null;
+
+
             showAccount(
-                data.username
+                data.username,
+                currentAccountId
             );
 
         } else {
@@ -2657,6 +3445,7 @@ async function checkLoginSession() {
             "Session check error:",
             error
         );
+
 
         showAuthArea();
 
@@ -2700,6 +3489,7 @@ async function checkServerStatus() {
             dot.className =
                 "status-dot online";
 
+
             text.innerText =
                 "Account server online";
 
@@ -2707,6 +3497,7 @@ async function checkServerStatus() {
 
             dot.className =
                 "status-dot offline";
+
 
             text.innerText =
                 "Account server unavailable";
@@ -2717,6 +3508,7 @@ async function checkServerStatus() {
 
         dot.className =
             "status-dot offline";
+
 
         text.innerText =
             "Account server unavailable";
@@ -2730,31 +3522,30 @@ async function checkServerStatus() {
 CHAT ENTER KEY
 ========================================================= */
 
-document.getElementById(
-    "chatInput"
-).addEventListener(
-    "keydown",
-    function(event) {
+document
+    .getElementById("chatInput")
+    .addEventListener(
+        "keydown",
+        function(event) {
 
-        if (
-            event.key === "Enter"
-        ) {
+            if (
+                event.key ===
+                "Enter"
+            ) {
 
-            event.preventDefault();
+                event.preventDefault();
 
-            sendMessage();
+                sendMessage();
+
+            }
 
         }
-
-    }
-);
+    );
 
 
 /* =========================================================
 INITIALIZE
 ========================================================= */
-
-loadCurrentAccountId();
 
 checkServerStatus();
 
@@ -2764,3 +3555,4 @@ checkLoginSession();
 
 </body>
 </html>
+```
