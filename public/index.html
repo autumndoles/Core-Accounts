@@ -43,6 +43,16 @@ body {
 
 }
 
+button,
+input {
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+}
+
 
 /* =========================================================
 MAIN CONTAINER
@@ -330,6 +340,42 @@ BUTTONS
 
 }
 
+.small-button {
+
+    padding:
+        12px
+        18px;
+
+    border: none;
+
+    border-radius: 6px;
+
+    background:
+        #ff8c00;
+
+    color: white;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+}
+
+.small-button:hover {
+
+    background:
+        #ff9f2e;
+
+}
+
+.small-button:disabled {
+
+    opacity: 0.5;
+
+    cursor: not-allowed;
+
+}
+
 
 /* =========================================================
 MESSAGES
@@ -592,34 +638,6 @@ FRIENDS
 
 }
 
-.small-button {
-
-    padding:
-        12px
-        18px;
-
-    border: none;
-
-    border-radius: 6px;
-
-    background:
-        #ff8c00;
-
-    color: white;
-
-    font-weight: bold;
-
-    cursor: pointer;
-
-}
-
-.small-button:hover {
-
-    background:
-        #ff9f2e;
-
-}
-
 .friends-list {
 
     display: flex;
@@ -747,6 +765,61 @@ FRIENDS
 
 }
 
+.remove-friend-button:hover {
+
+    background:
+        #5c1d1d;
+
+    border-color:
+        #914040;
+
+}
+
+
+/* =========================================================
+SEARCH RESULTS
+========================================================= */
+
+.search-results {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+
+    margin-bottom: 25px;
+
+}
+
+.search-result-item {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding:
+        14px;
+
+    background:
+        #252525;
+
+    border-radius: 8px;
+
+}
+
+.search-result-user {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+}
+
 
 /* =========================================================
 FRIEND REQUESTS
@@ -780,6 +853,16 @@ FRIEND REQUESTS
 
 }
 
+.request-user {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+}
+
 .request-actions {
 
     display: flex;
@@ -807,6 +890,13 @@ FRIEND REQUESTS
 
 }
 
+.accept-button:hover {
+
+    background:
+        #39a95c;
+
+}
+
 .decline-button {
 
     padding:
@@ -826,6 +916,13 @@ FRIEND REQUESTS
     color: white;
 
     cursor: pointer;
+
+}
+
+.decline-button:hover {
+
+    background:
+        #3a3a3a;
 
 }
 
@@ -911,6 +1008,28 @@ CHAT
 
 }
 
+.chat-friend-name {
+
+    font-weight: bold;
+
+}
+
+.chat-friend-status {
+
+    font-size: 11px;
+
+    color: #888;
+
+    margin-top: 3px;
+
+}
+
+.chat-friend-status.online {
+
+    color: #39d353;
+
+}
+
 .chat-window {
 
     display: flex;
@@ -945,6 +1064,8 @@ CHAT
 
     overflow-y: auto;
 
+    min-height: 280px;
+
 }
 
 .chat-empty {
@@ -960,6 +1081,65 @@ CHAT
     color: #777;
 
     text-align: center;
+
+}
+
+.chat-message {
+
+    display: flex;
+
+    margin-bottom: 10px;
+
+}
+
+.chat-message.own {
+
+    justify-content: flex-end;
+
+}
+
+.chat-message-bubble {
+
+    max-width: 75%;
+
+    padding:
+        9px
+        12px;
+
+    border-radius: 10px;
+
+    background:
+        #292929;
+
+    word-break: break-word;
+
+}
+
+.chat-message.own
+.chat-message-bubble {
+
+    background:
+        #ff8c00;
+
+}
+
+.chat-message-time {
+
+    font-size: 10px;
+
+    color: #888;
+
+    margin-top: 4px;
+
+}
+
+.chat-message.own
+.chat-message-time {
+
+    color:
+        #eee;
+
+    text-align: right;
 
 }
 
@@ -1003,6 +1183,14 @@ CHAT
     font-weight: bold;
 
     cursor: pointer;
+
+}
+
+.chat-input-area button:disabled {
+
+    opacity: 0.5;
+
+    cursor: not-allowed;
 
 }
 
@@ -1180,6 +1368,32 @@ MOBILE
     .friend-search {
 
         flex-direction: column;
+
+    }
+
+    .friend-item,
+    .request-item,
+    .search-result-item {
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+        gap: 12px;
+
+    }
+
+    .friend-actions,
+    .request-actions {
+
+        width: 100%;
+
+    }
+
+    .friend-actions button,
+    .request-actions button {
+
+        flex: 1;
 
     }
 
@@ -1561,13 +1775,15 @@ FRIENDS PAGE
         type="text"
         maxlength="20"
         placeholder="Enter a username"
+        onkeydown="handleFriendSearchKey(event)"
     >
 
     <button
+        id="friendSearchButton"
         class="small-button"
         onclick="searchFriend()"
     >
-        Add Friend
+        Search
     </button>
 
 </div>
@@ -1576,6 +1792,12 @@ FRIENDS PAGE
 <div
     id="friendSearchMessage"
     class="message"
+></div>
+
+
+<div
+    id="searchResults"
+    class="search-results"
 ></div>
 
 
@@ -1591,9 +1813,7 @@ FRIENDS PAGE
 
     <div class="empty-state">
 
-        You don't have any friends yet.
-
-        Add someone to get started!
+        Loading friends...
 
     </div>
 
@@ -1630,8 +1850,7 @@ REQUESTS PAGE
 
     <div class="empty-state">
 
-        You don't have any pending
-        friend requests.
+        Loading friend requests...
 
     </div>
 
@@ -1672,9 +1891,13 @@ CHAT PAGE
             Friends
         </h3>
 
-        <div class="chat-friend">
+        <div
+            id="chatFriendsList"
+        >
 
-            No friends yet.
+            <div class="chat-friend">
+                No friends yet.
+            </div>
 
         </div>
 
@@ -1713,9 +1936,10 @@ CHAT PAGE
             <input
                 id="chatInput"
                 type="text"
-                maxlength="1000"
+                maxlength="2000"
                 placeholder="Type a message..."
                 disabled
+                onkeydown="handleChatKey(event)"
             >
 
             <button
@@ -1771,7 +1995,26 @@ Core Games Accounts
 
 </div>
 
+<!-- =====================================================
+SOCKET.IO CLIENT
+===================================================== -->
+
+<script src="/socket.io/socket.io.js"></script>
+
 <script>
+
+/* =========================================================
+GLOBAL STATE
+========================================================= */
+
+let currentUsername = null;
+
+let currentFriends = [];
+
+let selectedChatFriend = null;
+
+let socket = null;
+
 
 /* =========================================================
 TAB SWITCHING
@@ -1951,6 +2194,27 @@ function showSocialPage(
 
     }
 
+
+    if (pageId === "friendsPage") {
+
+        loadFriends();
+
+    }
+
+
+    if (pageId === "requestsPage") {
+
+        loadFriendRequests();
+
+    }
+
+
+    if (pageId === "chatPage") {
+
+        loadChatFriends();
+
+    }
+
 }
 
 
@@ -2006,6 +2270,10 @@ function showAccount(
     username
 ) {
 
+    currentUsername =
+        username;
+
+
     document
         .getElementById(
             "authArea"
@@ -2030,6 +2298,13 @@ function showAccount(
         .innerText =
         username;
 
+
+    connectSocket();
+
+    loadFriends();
+
+    loadFriendRequests();
+
 }
 
 
@@ -2038,6 +2313,26 @@ SHOW LOGIN AREA
 ========================================================= */
 
 function showAuthArea() {
+
+    currentUsername =
+        null;
+
+    currentFriends =
+        [];
+
+    selectedChatFriend =
+        null;
+
+
+    if (socket) {
+
+        socket.disconnect();
+
+        socket =
+            null;
+
+    }
+
 
     document
         .getElementById(
@@ -2448,18 +2743,39 @@ async function logout() {
 
 /* =========================================================
 FRIEND SEARCH
-TEMPORARY FRONTEND PLACEHOLDER
 ========================================================= */
 
-function searchFriend() {
+function handleFriendSearchKey(
+    event
+) {
+
+    if (
+        event.key === "Enter"
+    ) {
+
+        searchFriend();
+
+    }
+
+}
+
+
+async function searchFriend() {
+
+    const input =
+        document.getElementById(
+            "friendSearchInput"
+        );
+
 
     const username =
-        document
-            .getElementById(
-                "friendSearchInput"
-            )
-            .value
-            .trim();
+        input.value.trim();
+
+
+    const results =
+        document.getElementById(
+            "searchResults"
+        );
 
 
     if (!username) {
@@ -2470,24 +2786,1410 @@ function searchFriend() {
             "error"
         );
 
+        results.innerHTML =
+            "";
+
         return;
 
     }
 
 
-    showMessage(
-        "friendSearchMessage",
-        "Friend requests will be connected to the account server soon.",
-        "success"
+    const button =
+        document.getElementById(
+            "friendSearchButton"
+        );
+
+
+    button.disabled =
+        true;
+
+    button.innerText =
+        "Searching...";
+
+
+    results.innerHTML =
+        "";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/users/search?q=" +
+                encodeURIComponent(
+                    username
+                )
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            showMessage(
+                "friendSearchMessage",
+                data.message ||
+                    "Unable to search users.",
+                "error"
+            );
+
+            return;
+
+        }
+
+
+        if (
+            data.users.length === 0
+        ) {
+
+            showMessage(
+                "friendSearchMessage",
+                "No users found.",
+                "error"
+            );
+
+            return;
+
+        }
+
+
+        clearFriendSearchMessage();
+
+
+        data.users.forEach(
+            function(user) {
+
+                const item =
+                    document.createElement(
+                        "div"
+                    );
+
+                item.className =
+                    "search-result-item";
+
+
+                const userInfo =
+                    document.createElement(
+                        "div"
+                    );
+
+                userInfo.className =
+                    "search-result-user";
+
+
+                const avatar =
+                    createAvatar(
+                        user.username
+                    );
+
+
+                const name =
+                    document.createElement(
+                        "div"
+                    );
+
+                name.className =
+                    "friend-name";
+
+                name.innerText =
+                    user.username;
+
+
+                userInfo.appendChild(
+                    avatar
+                );
+
+                userInfo.appendChild(
+                    name
+                );
+
+
+                const addButton =
+                    document.createElement(
+                        "button"
+                    );
+
+                addButton.className =
+                    "small-button";
+
+                addButton.innerText =
+                    "Add Friend";
+
+
+                addButton.onclick =
+                    function() {
+
+                        sendFriendRequest(
+                            user.username,
+                            addButton
+                        );
+
+                    };
+
+
+                item.appendChild(
+                    userInfo
+                );
+
+                item.appendChild(
+                    addButton
+                );
+
+
+                results.appendChild(
+                    item
+                );
+
+            }
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "User search error:",
+            error
+        );
+
+
+        showMessage(
+            "friendSearchMessage",
+            "Unable to connect to the account server.",
+            "error"
+        );
+
+    } finally {
+
+        button.disabled =
+            false;
+
+        button.innerText =
+            "Search";
+
+    }
+
+}
+
+
+function clearFriendSearchMessage() {
+
+    const element =
+        document.getElementById(
+            "friendSearchMessage"
+        );
+
+
+    element.className =
+        "message";
+
+    element.innerText =
+        "";
+
+}
+
+
+/* =========================================================
+SEND FRIEND REQUEST
+========================================================= */
+
+async function sendFriendRequest(
+    username,
+    button
+) {
+
+    if (button) {
+
+        button.disabled =
+            true;
+
+        button.innerText =
+            "Sending...";
+
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/friends/request",
+                {
+
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body:
+                        JSON.stringify({
+
+                            username
+
+                        })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            data.success
+        ) {
+
+            showMessage(
+                "friendSearchMessage",
+                "Friend request sent to " +
+                username +
+                "!",
+                "success"
+            );
+
+
+            if (button) {
+
+                button.innerText =
+                    "Request Sent";
+
+            }
+
+        } else {
+
+            showMessage(
+                "friendSearchMessage",
+                data.message ||
+                    "Unable to send friend request.",
+                "error"
+            );
+
+
+            if (button) {
+
+                button.disabled =
+                    false;
+
+                button.innerText =
+                    "Add Friend";
+
+            }
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Friend request error:",
+            error
+        );
+
+
+        showMessage(
+            "friendSearchMessage",
+            "Unable to connect to the account server.",
+            "error"
+        );
+
+
+        if (button) {
+
+            button.disabled =
+                false;
+
+            button.innerText =
+                "Add Friend";
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+LOAD FRIENDS
+========================================================= */
+
+async function loadFriends() {
+
+    const list =
+        document.getElementById(
+            "friendsList"
+        );
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/friends"
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            list.innerHTML =
+
+                '<div class="empty-state">' +
+
+                escapeHtml(
+                    data.message ||
+                    "Unable to load friends."
+                ) +
+
+                '</div>';
+
+            return;
+
+        }
+
+
+        currentFriends =
+            data.friends || [];
+
+
+        renderFriends();
+
+
+        loadChatFriends();
+
+
+    } catch (error) {
+
+        console.error(
+            "Load friends error:",
+            error
+        );
+
+
+        list.innerHTML =
+
+            '<div class="empty-state">' +
+
+            'Unable to connect to the account server.' +
+
+            '</div>';
+
+    }
+
+}
+
+
+/* =========================================================
+RENDER FRIENDS
+========================================================= */
+
+function renderFriends() {
+
+    const list =
+        document.getElementById(
+            "friendsList"
+        );
+
+
+    list.innerHTML =
+        "";
+
+
+    if (
+        currentFriends.length === 0
+    ) {
+
+        list.innerHTML =
+
+            '<div class="empty-state">' +
+
+            "You don't have any friends yet. " +
+
+            "Search for someone above to get started!" +
+
+            '</div>';
+
+        return;
+
+    }
+
+
+    currentFriends.forEach(
+        function(friend) {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+            item.className =
+                "friend-item";
+
+
+            const user =
+                document.createElement(
+                    "div"
+                );
+
+            user.className =
+                "friend-user";
+
+
+            const avatar =
+                createAvatar(
+                    friend.username
+                );
+
+
+            const info =
+                document.createElement(
+                    "div"
+                );
+
+
+            const name =
+                document.createElement(
+                    "div"
+                );
+
+            name.className =
+                "friend-name";
+
+            name.innerText =
+                friend.username;
+
+
+            const status =
+                document.createElement(
+                    "div"
+                );
+
+            status.id =
+                "friend-status-" +
+                friend.id;
+
+            status.className =
+                "friend-status";
+
+            status.innerText =
+                "Checking status...";
+
+
+            info.appendChild(
+                name
+            );
+
+            info.appendChild(
+                status
+            );
+
+
+            user.appendChild(
+                avatar
+            );
+
+            user.appendChild(
+                info
+            );
+
+
+            const actions =
+                document.createElement(
+                    "div"
+                );
+
+            actions.className =
+                "friend-actions";
+
+
+            const messageButton =
+                document.createElement(
+                    "button"
+                );
+
+            messageButton.className =
+                "friend-action-button";
+
+            messageButton.innerText =
+                "Message";
+
+            messageButton.onclick =
+                function() {
+
+                    openChatWithFriend(
+                        friend
+                    );
+
+                };
+
+
+            const removeButton =
+                document.createElement(
+                    "button"
+                );
+
+            removeButton.className =
+                "friend-action-button remove-friend-button";
+
+            removeButton.innerText =
+                "Remove";
+
+            removeButton.onclick =
+                function() {
+
+                    removeFriend(
+                        friend,
+                        removeButton
+                    );
+
+                };
+
+
+            actions.appendChild(
+                messageButton
+            );
+
+            actions.appendChild(
+                removeButton
+            );
+
+
+            item.appendChild(
+                user
+            );
+
+            item.appendChild(
+                actions
+            );
+
+
+            list.appendChild(
+                item
+            );
+
+
+            if (socket) {
+
+                socket.emit(
+                    "getPresence",
+                    friend.id
+                );
+
+            }
+
+        }
     );
 
 }
 
 
 /* =========================================================
-CHAT
-TEMPORARY FRONTEND PLACEHOLDER
+REMOVE FRIEND
 ========================================================= */
+
+async function removeFriend(
+    friend,
+    button
+) {
+
+    const confirmed =
+        confirm(
+            "Remove " +
+            friend.username +
+            " from your friends?"
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    button.disabled =
+        true;
+
+    button.innerText =
+        "Removing...";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/friends/" +
+                encodeURIComponent(
+                    friend.id
+                ),
+                {
+
+                    method:
+                        "DELETE"
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            data.success
+        ) {
+
+            if (
+                selectedChatFriend &&
+                selectedChatFriend.id ===
+                friend.id
+            ) {
+
+                selectedChatFriend =
+                    null;
+
+                clearChatWindow();
+
+            }
+
+
+            await loadFriends();
+
+        } else {
+
+            alert(
+                data.message ||
+                "Unable to remove friend."
+            );
+
+
+            button.disabled =
+                false;
+
+            button.innerText =
+                "Remove";
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Remove friend error:",
+            error
+        );
+
+
+        alert(
+            "Unable to connect to the account server."
+        );
+
+
+        button.disabled =
+            false;
+
+        button.innerText =
+            "Remove";
+
+    }
+
+}
+
+
+/* =========================================================
+LOAD FRIEND REQUESTS
+========================================================= */
+
+async function loadFriendRequests() {
+
+    const list =
+        document.getElementById(
+            "requestList"
+        );
+
+
+    list.innerHTML =
+
+        '<div class="empty-state">' +
+
+        'Loading friend requests...' +
+
+        '</div>';
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/friends/requests"
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            list.innerHTML =
+
+                '<div class="empty-state">' +
+
+                escapeHtml(
+                    data.message ||
+                    "Unable to load friend requests."
+                ) +
+
+                '</div>';
+
+            return;
+
+        }
+
+
+        renderFriendRequests(
+            data.requests || []
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Load friend requests error:",
+            error
+        );
+
+
+        list.innerHTML =
+
+            '<div class="empty-state">' +
+
+            'Unable to connect to the account server.' +
+
+            '</div>';
+
+    }
+
+}
+
+
+/* =========================================================
+RENDER FRIEND REQUESTS
+========================================================= */
+
+function renderFriendRequests(
+    requests
+) {
+
+    const list =
+        document.getElementById(
+            "requestList"
+        );
+
+
+    list.innerHTML =
+        "";
+
+
+    if (
+        requests.length === 0
+    ) {
+
+        list.innerHTML =
+
+            '<div class="empty-state">' +
+
+            "You don't have any pending " +
+
+            "friend requests." +
+
+            '</div>';
+
+        return;
+
+    }
+
+
+    requests.forEach(
+        function(request) {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+            item.className =
+                "request-item";
+
+
+            const user =
+                document.createElement(
+                    "div"
+                );
+
+            user.className =
+                "request-user";
+
+
+            const avatar =
+                createAvatar(
+                    request.username
+                );
+
+
+            const name =
+                document.createElement(
+                    "div"
+                );
+
+            name.className =
+                "friend-name";
+
+            name.innerText =
+                request.username;
+
+
+            user.appendChild(
+                avatar
+            );
+
+            user.appendChild(
+                name
+            );
+
+
+            const actions =
+                document.createElement(
+                    "div"
+                );
+
+            actions.className =
+                "request-actions";
+
+
+            const acceptButton =
+                document.createElement(
+                    "button"
+                );
+
+            acceptButton.className =
+                "accept-button";
+
+            acceptButton.innerText =
+                "Accept";
+
+
+            acceptButton.onclick =
+                function() {
+
+                    respondToFriendRequest(
+                        request.id,
+                        "accept",
+                        acceptButton,
+                        declineButton
+                    );
+
+                };
+
+
+            const declineButton =
+                document.createElement(
+                    "button"
+                );
+
+            declineButton.className =
+                "decline-button";
+
+            declineButton.innerText =
+                "Decline";
+
+
+            declineButton.onclick =
+                function() {
+
+                    respondToFriendRequest(
+                        request.id,
+                        "decline",
+                        acceptButton,
+                        declineButton
+                    );
+
+                };
+
+
+            actions.appendChild(
+                acceptButton
+            );
+
+            actions.appendChild(
+                declineButton
+            );
+
+
+            item.appendChild(
+                user
+            );
+
+            item.appendChild(
+                actions
+            );
+
+
+            list.appendChild(
+                item
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+ACCEPT / DECLINE FRIEND REQUEST
+========================================================= */
+
+async function respondToFriendRequest(
+    requestId,
+    action,
+    acceptButton,
+    declineButton
+) {
+
+    acceptButton.disabled =
+        true;
+
+    declineButton.disabled =
+        true;
+
+
+    acceptButton.innerText =
+        action === "accept"
+            ? "Accepting..."
+            : "Accept";
+
+
+    declineButton.innerText =
+        action === "decline"
+            ? "Declining..."
+            : "Decline";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/friends/requests/" +
+                encodeURIComponent(
+                    requestId
+                ) +
+                "/" +
+                action,
+                {
+
+                    method:
+                        "POST"
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            data.success
+        ) {
+
+            await loadFriendRequests();
+
+            await loadFriends();
+
+        } else {
+
+            alert(
+                data.message ||
+                "Unable to process friend request."
+            );
+
+
+            acceptButton.disabled =
+                false;
+
+            declineButton.disabled =
+                false;
+
+            acceptButton.innerText =
+                "Accept";
+
+            declineButton.innerText =
+                "Decline";
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Friend request response error:",
+            error
+        );
+
+
+        alert(
+            "Unable to connect to the account server."
+        );
+
+
+        acceptButton.disabled =
+            false;
+
+        declineButton.disabled =
+            false;
+
+        acceptButton.innerText =
+            "Accept";
+
+        declineButton.innerText =
+            "Decline";
+
+    }
+
+}
+
+
+/* =========================================================
+CHAT FRIENDS
+========================================================= */
+
+function loadChatFriends() {
+
+    const list =
+        document.getElementById(
+            "chatFriendsList"
+        );
+
+
+    list.innerHTML =
+        "";
+
+
+    if (
+        currentFriends.length === 0
+    ) {
+
+        list.innerHTML =
+
+            '<div class="chat-friend">' +
+
+            'No friends yet.' +
+
+            '</div>';
+
+        return;
+
+    }
+
+
+    currentFriends.forEach(
+        function(friend) {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+            item.className =
+                "chat-friend";
+
+
+            if (
+                selectedChatFriend &&
+                selectedChatFriend.id ===
+                friend.id
+            ) {
+
+                item.classList.add(
+                    "active"
+                );
+
+            }
+
+
+            const name =
+                document.createElement(
+                    "div"
+                );
+
+            name.className =
+                "chat-friend-name";
+
+            name.innerText =
+                friend.username;
+
+
+            const status =
+                document.createElement(
+                    "div"
+                );
+
+            status.id =
+                "chat-status-" +
+                friend.id;
+
+            status.className =
+                "chat-friend-status";
+
+            status.innerText =
+                "Offline";
+
+
+            item.appendChild(
+                name
+            );
+
+            item.appendChild(
+                status
+            );
+
+
+            item.onclick =
+                function() {
+
+                    openChatWithFriend(
+                        friend
+                    );
+
+                };
+
+
+            list.appendChild(
+                item
+            );
+
+
+            if (socket) {
+
+                socket.emit(
+                    "getPresence",
+                    friend.id
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+OPEN CHAT
+========================================================= */
+
+async function openChatWithFriend(
+    friend
+) {
+
+    selectedChatFriend =
+        friend;
+
+
+    showSocialPageById(
+        "chatPage"
+    );
+
+
+    loadChatFriends();
+
+
+    document
+        .getElementById(
+            "chatHeader"
+        )
+        .innerText =
+        friend.username;
+
+
+    document
+        .getElementById(
+            "chatInput"
+        )
+        .disabled =
+        false;
+
+
+    document
+        .getElementById(
+            "sendMessageButton"
+        )
+        .disabled =
+        false;
+
+
+    await loadMessageHistory(
+        friend.id
+    );
+
+
+    document
+        .getElementById(
+            "chatInput"
+        )
+        .focus();
+
+}
+
+
+/* =========================================================
+LOAD MESSAGE HISTORY
+========================================================= */
+
+async function loadMessageHistory(
+    friendId
+) {
+
+    const messages =
+        document.getElementById(
+            "chatMessages"
+        );
+
+
+    messages.innerHTML =
+
+        '<div class="chat-empty">' +
+
+        'Loading messages...' +
+
+        '</div>';
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/messages/" +
+                encodeURIComponent(
+                    friendId
+                )
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            messages.innerHTML =
+
+                '<div class="chat-empty">' +
+
+                escapeHtml(
+                    data.message ||
+                    "Unable to load messages."
+                ) +
+
+                '</div>';
+
+            return;
+
+        }
+
+
+        messages.innerHTML =
+            "";
+
+
+        if (
+            data.messages.length === 0
+        ) {
+
+            messages.innerHTML =
+
+                '<div class="chat-empty">' +
+
+                "No messages yet. Say hello!" +
+
+                '</div>';
+
+            return;
+
+        }
+
+
+        data.messages.forEach(
+            function(message) {
+
+                appendChatMessage(
+                    message
+                );
+
+            }
+        );
+
+
+        scrollChatToBottom();
+
+
+    } catch (error) {
+
+        console.error(
+            "Message history error:",
+            error
+        );
+
+
+        messages.innerHTML =
+
+            '<div class="chat-empty">' +
+
+            'Unable to connect to the account server.' +
+
+            '</div>';
+
+    }
+
+}
+
+
+/* =========================================================
+SEND MESSAGE
+========================================================= */
+
+function handleChatKey(
+    event
+) {
+
+    if (
+        event.key === "Enter"
+    ) {
+
+        event.preventDefault();
+
+        sendMessage();
+
+    }
+
+}
+
 
 function sendMessage() {
 
@@ -2501,19 +4203,549 @@ function sendMessage() {
         input.value.trim();
 
 
-    if (!message) {
+    if (
+        !message ||
+        !selectedChatFriend
+    ) {
+
         return;
+
     }
 
 
-    console.log(
-        "Chat message:",
-        message
+    if (
+        !socket ||
+        !socket.connected
+    ) {
+
+        alert(
+            "Not connected to the messaging server."
+        );
+
+        return;
+
+    }
+
+
+    socket.emit(
+        "sendMessage",
+        {
+
+            receiverId:
+                selectedChatFriend.id,
+
+            message
+
+        }
     );
 
 
     input.value =
         "";
+
+}
+
+
+/* =========================================================
+APPEND CHAT MESSAGE
+========================================================= */
+
+function appendChatMessage(
+    message
+) {
+
+    const container =
+        document.getElementById(
+            "chatMessages"
+        );
+
+
+    const empty =
+        container.querySelector(
+            ".chat-empty"
+        );
+
+
+    if (empty) {
+
+        container.innerHTML =
+            "";
+
+    }
+
+
+    const wrapper =
+        document.createElement(
+            "div"
+        );
+
+
+    const ownMessage =
+        Number(
+            message.senderId
+        ) ===
+        Number(
+            getCurrentAccountId()
+        );
+
+
+    wrapper.className =
+        "chat-message" +
+        (
+            ownMessage
+                ? " own"
+                : ""
+        );
+
+
+    const bubble =
+        document.createElement(
+            "div"
+        );
+
+    bubble.className =
+        "chat-message-bubble";
+
+
+    const text =
+        document.createElement(
+            "div"
+        );
+
+    text.innerText =
+        message.message;
+
+
+    const time =
+        document.createElement(
+            "div"
+        );
+
+    time.className =
+        "chat-message-time";
+
+    time.innerText =
+        formatMessageTime(
+            message.createdAt
+        );
+
+
+    bubble.appendChild(
+        text
+    );
+
+    bubble.appendChild(
+        time
+    );
+
+
+    wrapper.appendChild(
+        bubble
+    );
+
+
+    container.appendChild(
+        wrapper
+    );
+
+
+    scrollChatToBottom();
+
+}
+
+
+/* =========================================================
+CHAT WINDOW
+========================================================= */
+
+function clearChatWindow() {
+
+    document
+        .getElementById(
+            "chatHeader"
+        )
+        .innerText =
+        "Select a friend";
+
+
+    document
+        .getElementById(
+            "chatMessages"
+        )
+        .innerHTML =
+
+        '<div class="chat-empty">' +
+
+        'Add a friend to start chatting.' +
+
+        '</div>';
+
+
+    document
+        .getElementById(
+            "chatInput"
+        )
+        .disabled =
+        true;
+
+
+    document
+        .getElementById(
+            "sendMessageButton"
+        )
+        .disabled =
+        true;
+
+}
+
+
+function scrollChatToBottom() {
+
+    const container =
+        document.getElementById(
+            "chatMessages"
+        );
+
+
+    container.scrollTop =
+        container.scrollHeight;
+
+}
+
+
+function formatMessageTime(
+    timestamp
+) {
+
+    if (!timestamp) {
+
+        return "";
+
+    }
+
+
+    const date =
+        new Date(
+            timestamp
+        );
+
+
+    return date.toLocaleString();
+
+}
+
+
+/* =========================================================
+SOCKET.IO
+========================================================= */
+
+function connectSocket() {
+
+    if (
+        socket &&
+        socket.connected
+    ) {
+
+        return;
+
+    }
+
+
+    if (
+        typeof io ===
+        "undefined"
+    ) {
+
+        console.error(
+            "Socket.IO client library was not loaded."
+        );
+
+        return;
+
+    }
+
+
+    socket =
+        io();
+
+
+    socket.on(
+        "connect",
+        function() {
+
+            console.log(
+                "Connected to Core Games real-time server."
+            );
+
+
+            currentFriends.forEach(
+                function(friend) {
+
+                    socket.emit(
+                        "getPresence",
+                        friend.id
+                    );
+
+                }
+            );
+
+        }
+    );
+
+
+    socket.on(
+        "connect_error",
+        function(error) {
+
+            console.error(
+                "Socket connection error:",
+                error
+            );
+
+        }
+    );
+
+
+    socket.on(
+        "presence",
+        function(data) {
+
+            updatePresence(
+                data.userId,
+                data.online
+            );
+
+        }
+    );
+
+
+    socket.on(
+        "newMessage",
+        function(message) {
+
+            if (
+                selectedChatFriend &&
+                (
+                    Number(
+                        message.senderId
+                    ) ===
+                    Number(
+                        selectedChatFriend.id
+                    )
+
+                    ||
+
+                    Number(
+                        message.receiverId
+                    ) ===
+                    Number(
+                        selectedChatFriend.id
+                    )
+                )
+            ) {
+
+                appendChatMessage(
+                    message
+                );
+
+            }
+
+        }
+    );
+
+
+    socket.on(
+        "messageError",
+        function(data) {
+
+            alert(
+                data.message ||
+                "Unable to send message."
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+PRESENCE
+========================================================= */
+
+function updatePresence(
+    userId,
+    online
+) {
+
+    const friendStatus =
+        document.getElementById(
+            "friend-status-" +
+            userId
+        );
+
+
+    if (friendStatus) {
+
+        friendStatus.innerText =
+            online
+                ? "Online"
+                : "Offline";
+
+        friendStatus.className =
+            online
+                ? "friend-status online"
+                : "friend-status";
+
+    }
+
+
+    const chatStatus =
+        document.getElementById(
+            "chat-status-" +
+            userId
+        );
+
+
+    if (chatStatus) {
+
+        chatStatus.innerText =
+            online
+                ? "Online"
+                : "Offline";
+
+        chatStatus.className =
+            online
+                ? "chat-friend-status online"
+                : "chat-friend-status";
+
+    }
+
+}
+
+
+/* =========================================================
+CURRENT ACCOUNT ID
+========================================================= */
+
+/*
+The current server API exposes the username through /api/me,
+but not the account ID.
+
+We keep this helper for message alignment.
+
+Incoming messages are still displayed correctly,
+and the server remains responsible for authentication.
+*/
+
+let currentAccountId =
+    null;
+
+
+async function loadCurrentAccount() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/v1/me"
+            );
+
+
+        if (
+            !response.ok
+        ) {
+
+            return;
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            data.success &&
+            data.user
+        ) {
+
+            currentAccountId =
+                data.user.id;
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Unable to load account ID:",
+            error
+        );
+
+    }
+
+}
+
+
+function getCurrentAccountId() {
+
+    return currentAccountId;
+
+}
+
+
+/* =========================================================
+ESCAPE HTML
+========================================================= */
+
+function escapeHtml(
+    value
+) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+
+    div.innerText =
+        String(
+            value || ""
+        );
+
+
+    return div.innerHTML;
+
+}
+
+
+/* =========================================================
+CREATE AVATAR
+========================================================= */
+
+function createAvatar(
+    username
+) {
+
+    const avatar =
+        document.createElement(
+            "div"
+        );
+
+
+    avatar.className =
+        "friend-avatar";
+
+
+    avatar.innerText =
+        String(
+            username || "?"
+        )
+        .charAt(0)
+        .toUpperCase();
+
+
+    return avatar;
 
 }
 
@@ -2650,6 +4882,8 @@ INITIALIZE
 checkServerStatus();
 
 checkLoginSession();
+
+loadCurrentAccount();
 
 </script>
 
