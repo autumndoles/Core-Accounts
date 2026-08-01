@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -640,7 +639,6 @@ button {
     }
 }
 </style>
-
 </head>
 
 <body>
@@ -649,13 +647,8 @@ button {
 
 <div class="logo-area">
     <div class="logo">C</div>
-
-```
-<h1>Core Games</h1>
-
-<p>Your account for the Core Games ecosystem.</p>
-```
-
+    <h1>Core Games</h1>
+    <p>Your account for the Core Games ecosystem.</p>
 </div>
 
 <div class="card">
@@ -688,7 +681,6 @@ type="text"
 maxlength="20"
 autocomplete="username"
 placeholder="Enter your username"
-
 >
 
 <label for="loginPassword">Password</label>
@@ -698,7 +690,6 @@ id="loginPassword"
 type="password"
 autocomplete="current-password"
 placeholder="Enter your password"
-
 >
 
 <button id="loginButton" class="submit-button" onclick="login()">
@@ -723,7 +714,6 @@ type="text"
 maxlength="20"
 autocomplete="username"
 placeholder="Choose a username"
-
 >
 
 <label for="registerPassword">Password</label>
@@ -733,7 +723,6 @@ id="registerPassword"
 type="password"
 autocomplete="new-password"
 placeholder="At least 8 characters"
-
 >
 
 <label for="registerPasswordConfirm">Confirm Password</label>
@@ -743,7 +732,6 @@ id="registerPasswordConfirm"
 type="password"
 autocomplete="new-password"
 placeholder="Enter your password again"
-
 >
 
 <button id="registerButton" class="submit-button" onclick="register()">
@@ -763,49 +751,29 @@ placeholder="Enter your password again"
 <button
 class="social-nav-button active"
 onclick="showSocialPage('profilePage', this)"
-
 >
-
-```
 Profile
-```
-
 </button>
 
 <button
 class="social-nav-button"
 onclick="showSocialPage('friendsPage', this)"
-
 >
-
-```
 Friends
-```
-
 </button>
 
 <button
 class="social-nav-button"
 onclick="showSocialPage('requestsPage', this)"
-
 >
-
-```
 Requests
-```
-
 </button>
 
 <button
 class="social-nav-button"
 onclick="showSocialPage('chatPage', this)"
-
 >
-
-```
 Messages
-```
-
 </button>
 
 </div>
@@ -842,26 +810,16 @@ Messages
 <button
 class="submit-button"
 onclick="showSocialPageById('friendsPage')"
-
 >
-
-```
 Manage Friends
-```
-
 </button>
 
 <button
 class="logout-button"
 id="logoutButton"
 onclick="logout()"
-
 >
-
-```
 Log Out
-```
-
 </button>
 
 <div id="logoutMessage" class="message"></div>
@@ -884,20 +842,14 @@ type="text"
 maxlength="20"
 placeholder="Enter a username"
 oninput="searchFriendUsers()"
-
 >
 
 <button
 id="addFriendButton"
 class="small-button"
 onclick="searchFriend()"
-
 >
-
-```
 Add Friend
-```
-
 </button>
 
 </div>
@@ -982,20 +934,14 @@ type="text"
 maxlength="2000"
 placeholder="Type a message..."
 disabled
-
 >
 
 <button
 id="sendMessageButton"
 onclick="sendMessage()"
 disabled
-
 >
-
-```
 Send
-```
-
 </button>
 
 </div>
