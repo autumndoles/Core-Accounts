@@ -21,12 +21,22 @@ credentials: true
 const PORT = process.env.PORT || 3000;
 
 const SESSION_DURATION_DAYS = 30;
+
 const SESSION_DURATION_MS =
-SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000;
+SESSION_DURATION_DAYS *
+24 *
+60 *
+60 *
+1000;
 
 const API_TOKEN_DURATION_DAYS = 30;
+
 const API_TOKEN_DURATION_MS =
-API_TOKEN_DURATION_DAYS * 24 * 60 * 60 * 1000;
+API_TOKEN_DURATION_DAYS *
+24 *
+60 *
+60 *
+1000;
 
 /* =========================================================
 POSTGRESQL DATABASE
@@ -97,9 +107,7 @@ async function initializeDatabase() {
 ```
 try {
 
-    /* =====================================================
-    ACCOUNTS
-    ===================================================== */
+    /* ACCOUNTS */
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS accounts (
@@ -111,9 +119,7 @@ try {
     `);
 
 
-    /* =====================================================
-    SESSIONS
-    ===================================================== */
+    /* SESSIONS */
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS sessions (
@@ -128,9 +134,7 @@ try {
     `);
 
 
-    /* =====================================================
-    API TOKENS
-    ===================================================== */
+    /* API TOKENS */
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS api_tokens (
@@ -145,19 +149,17 @@ try {
     `);
 
 
-    /* =====================================================
-    FRIENDSHIPS
-    ===================================================== */
+    /* FRIEND REQUESTS */
 
     await pool.query(`
-        CREATE TABLE IF NOT EXISTS friendships (
+        CREATE TABLE IF NOT EXISTS friend_requests (
             id SERIAL PRIMARY KEY,
 
-            requester_id INTEGER NOT NULL
+            sender_id INTEGER NOT NULL
                 REFERENCES accounts(id)
                 ON DELETE CASCADE,
 
-            addressee_id INTEGER NOT NULL
+            receiver_id INTEGER NOT NULL
                 REFERENCES accounts(id)
                 ON DELETE CASCADE,
 
@@ -167,21 +169,34 @@ try {
             created_at TIMESTAMP
                 DEFAULT CURRENT_TIMESTAMP,
 
-            updated_at TIMESTAMP
-                DEFAULT CURRENT_TIMESTAMP,
-
-            CONSTRAINT friendships_different_users
-                CHECK (requester_id <> addressee_id),
-
-            CONSTRAINT friendships_unique_pair
-                UNIQUE (requester_id, addressee_id)
+            UNIQUE(sender_id, receiver_id)
         )
     `);
 
 
-    /* =====================================================
-    MESSAGES
-    ===================================================== */
+    /* FRIENDSHIPS */
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS friendships (
+            id SERIAL PRIMARY KEY,
+
+            user_id INTEGER NOT NULL
+                REFERENCES accounts(id)
+                ON DELETE CASCADE,
+
+            friend_id INTEGER NOT NULL
+                REFERENCES accounts(id)
+                ON DELETE CASCADE,
+
+            created_at TIMESTAMP
+                DEFAULT CURRENT_TIMESTAMP,
+
+            UNIQUE(user_id, friend_id)
+        )
+    `);
+
+
+    /* MESSAGES */
 
     await pool.query(`
         CREATE TABLE IF NOT EXISTS messages (
@@ -197,37 +212,13 @@ try {
 
             message TEXT NOT NULL,
 
-            is_read BOOLEAN
-                DEFAULT FALSE,
-
             created_at TIMESTAMP
                 DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
 
-    /* =====================================================
-    ONLINE STATUS
-    ===================================================== */
-
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS user_presence (
-            account_id INTEGER PRIMARY KEY
-                REFERENCES accounts(id)
-                ON DELETE CASCADE,
-
-            is_online BOOLEAN
-                DEFAULT FALSE,
-
-            last_seen TIMESTAMP
-                DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-
-    /* =====================================================
-    INDEXES
-    ===================================================== */
+    /* INDEXES */
 
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
@@ -235,11 +226,13 @@ try {
         ON sessions(token_hash)
     `);
 
+
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
         sessions_expires_at_index
         ON sessions(expires_at)
     `);
+
 
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
@@ -247,28 +240,32 @@ try {
         ON api_tokens(token_hash)
     `);
 
+
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
         api_tokens_expires_at_index
         ON api_tokens(expires_at)
     `);
 
+
     await pool.query(`
         CREATE INDEX IF NOT EXISTS
-        messages_sender_receiver_index
+        friend_requests_receiver_index
+        ON friend_requests(receiver_id)
+    `);
+
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        friendships_user_index
+        ON friendships(user_id)
+    `);
+
+
+    await pool.query(`
+        CREATE INDEX IF NOT EXISTS
+        messages_conversation_index
         ON messages(sender_id, receiver_id, created_at)
-    `);
-
-    await pool.query(`
-        CREATE INDEX IF NOT EXISTS
-        messages_receiver_read_index
-        ON messages(receiver_id, is_read)
-    `);
-
-    await pool.query(`
-        CREATE INDEX IF NOT EXISTS
-        friendships_addressee_status_index
-        ON friendships(addressee_id, status)
     `);
 
 
@@ -304,9 +301,7 @@ return crypto
 
 }
 
-function hashSessionToken(
-token
-) {
+function hashSessionToken(token) {
 
 ```
 return crypto
@@ -336,6 +331,7 @@ const expiresAt =
         SESSION_DURATION_MS
     );
 
+
 await pool.query(
     `
     INSERT INTO sessions
@@ -348,6 +344,7 @@ await pool.query(
         expiresAt
     ]
 );
+
 
 return token;
 ```
@@ -362,16 +359,19 @@ req
 const token =
     req.cookies.core_session;
 
+
 if (!token) {
 
     return null;
 
 }
 
+
 const tokenHash =
     hashSessionToken(
         token
     );
+
 
 const result =
     await pool.query(
@@ -381,17 +381,22 @@ const result =
             accounts.username,
             accounts.created_at,
             sessions.expires_at
+
         FROM sessions
+
         INNER JOIN accounts
             ON accounts.id =
-                sessions.account_id
+               sessions.account_id
+
         WHERE sessions.token_hash = $1
-            AND sessions.expires_at > NOW()
+
+        AND sessions.expires_at > NOW()
         `,
         [
             tokenHash
         ]
     );
+
 
 if (
     result.rows.length === 0
@@ -400,6 +405,7 @@ if (
     return null;
 
 }
+
 
 return result.rows[0];
 ```
@@ -417,10 +423,14 @@ res.cookie(
     token,
     {
         httpOnly: true,
+
         secure: true,
+
         sameSite: "lax",
+
         maxAge:
             SESSION_DURATION_MS,
+
         path: "/"
     }
 );
@@ -437,8 +447,11 @@ res.clearCookie(
     "core_session",
     {
         httpOnly: true,
+
         secure: true,
+
         sameSite: "lax",
+
         path: "/"
     }
 );
@@ -495,6 +508,7 @@ const expiresAt =
         API_TOKEN_DURATION_MS
     );
 
+
 await pool.query(
     `
     INSERT INTO api_tokens
@@ -508,13 +522,12 @@ await pool.query(
     ]
 );
 
+
 return {
 
-    token:
-        token,
+    token,
 
-    expiresAt:
-        expiresAt
+    expiresAt
 
 };
 ```
@@ -529,27 +542,32 @@ req
 const authorization =
     req.headers.authorization;
 
+
 if (!authorization) {
 
     return null;
 
 }
 
+
 const parts =
     authorization.split(" ");
+
 
 if (
     parts.length !== 2 ||
     parts[0].toLowerCase() !==
-        "bearer"
+    "bearer"
 ) {
 
     return null;
 
 }
 
+
 const token =
     parts[1];
+
 
 if (!token) {
 
@@ -557,10 +575,12 @@ if (!token) {
 
 }
 
+
 const tokenHash =
     hashApiToken(
         token
     );
+
 
 const result =
     await pool.query(
@@ -570,17 +590,22 @@ const result =
             accounts.username,
             accounts.created_at,
             api_tokens.expires_at
+
         FROM api_tokens
+
         INNER JOIN accounts
             ON accounts.id =
-                api_tokens.account_id
+               api_tokens.account_id
+
         WHERE api_tokens.token_hash = $1
-            AND api_tokens.expires_at > NOW()
+
+        AND api_tokens.expires_at > NOW()
         `,
         [
             tokenHash
         ]
     );
+
 
 if (
     result.rows.length === 0
@@ -590,64 +615,8 @@ if (
 
 }
 
+
 return result.rows[0];
-```
-
-}
-
-/* =========================================================
-REQUIRE LOGIN
-========================================================= */
-
-async function requireLogin(
-req,
-res,
-next
-) {
-
-```
-try {
-
-    const account =
-        await getAccountFromSession(
-            req
-        );
-
-    if (!account) {
-
-        return res.status(401).json({
-
-            success: false,
-
-            message:
-                "You must be logged in."
-
-        });
-
-    }
-
-    req.account =
-        account;
-
-    next();
-
-} catch (error) {
-
-    console.error(
-        "Authentication error:",
-        error
-    );
-
-    return res.status(500).json({
-
-        success: false,
-
-        message:
-            "Unable to authenticate."
-
-    });
-
-}
 ```
 
 }
@@ -671,6 +640,7 @@ res
                 req.body.username ||
                 ""
             ).trim();
+
 
         const password =
             String(
@@ -711,9 +681,8 @@ res
 
 
         if (
-            !/^[a-zA-Z0-9_]+$/.test(
-                username
-            )
+            !/^[a-zA-Z0-9_]+$/
+                .test(username)
         ) {
 
             return res.status(400).json({
@@ -763,8 +732,9 @@ res
                 `
                 SELECT id
                 FROM accounts
-                WHERE LOWER(username) =
-                    LOWER($1)
+                WHERE LOWER(username)
+                =
+                LOWER($1)
                 `,
                 [
                     username
@@ -773,8 +743,9 @@ res
 
 
         if (
-            existingAccount.rows.length >
-            0
+            existingAccount
+                .rows
+                .length > 0
         ) {
 
             return res.status(409).json({
@@ -801,7 +772,9 @@ res
                 `
                 INSERT INTO accounts
                 (username, password_hash)
+
                 VALUES ($1, $2)
+
                 RETURNING
                     id,
                     username,
@@ -818,28 +791,6 @@ res
             result.rows[0];
 
 
-        await pool.query(
-            `
-            INSERT INTO user_presence
-            (account_id, is_online)
-            VALUES ($1, TRUE)
-            ON CONFLICT (account_id)
-            DO UPDATE SET
-                is_online = TRUE,
-                last_seen = CURRENT_TIMESTAMP
-            `,
-            [
-                account.id
-            ]
-        );
-
-
-        console.log(
-            "New Core Games account created: " +
-            account.username
-        );
-
-
         const sessionToken =
             await createSession(
                 account.id
@@ -849,6 +800,12 @@ res
         setSessionCookie(
             res,
             sessionToken
+        );
+
+
+        console.log(
+            "New Core Games account created: " +
+            account.username
         );
 
 
@@ -870,6 +827,7 @@ res
             "Registration error:",
             error
         );
+
 
         return res.status(500).json({
 
@@ -907,6 +865,7 @@ res
                 ""
             ).trim();
 
+
         const password =
             String(
                 req.body.password ||
@@ -938,9 +897,12 @@ res
                     id,
                     username,
                     password_hash
+
                 FROM accounts
-                WHERE LOWER(username) =
-                    LOWER($1)
+
+                WHERE LOWER(username)
+                =
+                LOWER($1)
                 `,
                 [
                     username
@@ -999,22 +961,6 @@ res
         );
 
 
-        await pool.query(
-            `
-            INSERT INTO user_presence
-            (account_id, is_online)
-            VALUES ($1, TRUE)
-            ON CONFLICT (account_id)
-            DO UPDATE SET
-                is_online = TRUE,
-                last_seen = CURRENT_TIMESTAMP
-            `,
-            [
-                account.id
-            ]
-        );
-
-
         console.log(
             "Account logged in: " +
             account.username
@@ -1039,6 +985,7 @@ res
             "Login error:",
             error
         );
+
 
         return res.status(500).json({
 
@@ -1089,22 +1036,6 @@ res
         }
 
 
-        await pool.query(
-            `
-            INSERT INTO user_presence
-            (account_id, is_online)
-            VALUES ($1, TRUE)
-            ON CONFLICT (account_id)
-            DO UPDATE SET
-                is_online = TRUE,
-                last_seen = CURRENT_TIMESTAMP
-            `,
-            [
-                account.id
-            ]
-        );
-
-
         return res.json({
 
             success: true,
@@ -1128,6 +1059,7 @@ res
             "Session check error:",
             error
         );
+
 
         return res.status(500).json({
 
@@ -1159,12 +1091,6 @@ res
 ```
     try {
 
-        const account =
-            await getAccountFromSession(
-                req
-            );
-
-
         const token =
             req.cookies.core_session;
 
@@ -1184,25 +1110,6 @@ res
                 `,
                 [
                     tokenHash
-                ]
-            );
-
-        }
-
-
-        if (account) {
-
-            await pool.query(
-                `
-                UPDATE user_presence
-                SET
-                    is_online = FALSE,
-                    last_seen =
-                        CURRENT_TIMESTAMP
-                WHERE account_id = $1
-                `,
-                [
-                    account.id
                 ]
             );
 
@@ -1253,11 +1160,72 @@ res
 );
 
 /* =========================================================
-SEARCH USERS
+SOCIAL AUTHENTICATION MIDDLEWARE
+========================================================= */
+
+async function requireLogin(
+req,
+res,
+next
+) {
+
+```
+try {
+
+    const account =
+        await getAccountFromSession(
+            req
+        );
+
+
+    if (!account) {
+
+        return res.status(401).json({
+
+            success: false,
+
+            message:
+                "You must be logged in."
+
+        });
+
+    }
+
+
+    req.account =
+        account;
+
+
+    next();
+
+} catch (error) {
+
+    console.error(
+        "Authentication error:",
+        error
+    );
+
+
+    return res.status(500).json({
+
+        success: false,
+
+        message:
+            "Unable to authenticate account."
+
+    });
+
+}
+```
+
+}
+
+/* =========================================================
+USER SEARCH
 ========================================================= */
 
 app.get(
-"/api/social/users/search",
+"/api/users/search",
 requireLogin,
 async (
 req,
@@ -1293,35 +1261,23 @@ res
             await pool.query(
                 `
                 SELECT
-                    accounts.id,
-                    accounts.username,
-
-                    COALESCE(
-                        user_presence.is_online,
-                        FALSE
-                    ) AS is_online,
-
-                    user_presence.last_seen
+                    id,
+                    username
 
                 FROM accounts
 
-                LEFT JOIN user_presence
-                    ON user_presence.account_id =
-                        accounts.id
+                WHERE username
+                ILIKE $1
 
-                WHERE accounts.id <> $1
+                AND id != $2
 
-                AND accounts.username ILIKE $2
-
-                ORDER BY accounts.username
+                ORDER BY username
 
                 LIMIT 20
                 `,
                 [
-                    req.account.id,
-                    "%" +
-                    query +
-                    "%"
+                    `%${query}%`,
+                    req.account.id
                 ]
             );
 
@@ -1341,6 +1297,7 @@ res
             "User search error:",
             error
         );
+
 
         return res.status(500).json({
 
@@ -1363,7 +1320,7 @@ SEND FRIEND REQUEST
 ========================================================= */
 
 app.post(
-"/api/social/friends/request",
+"/api/friends/request",
 requireLogin,
 async (
 req,
@@ -1394,13 +1351,16 @@ res
         }
 
 
-        const targetResult =
+        const userResult =
             await pool.query(
                 `
                 SELECT id, username
+
                 FROM accounts
-                WHERE LOWER(username) =
-                    LOWER($1)
+
+                WHERE LOWER(username)
+                =
+                LOWER($1)
                 `,
                 [
                     username
@@ -1409,8 +1369,7 @@ res
 
 
         if (
-            targetResult.rows.length ===
-            0
+            userResult.rows.length === 0
         ) {
 
             return res.status(404).json({
@@ -1426,7 +1385,7 @@ res
 
 
         const target =
-            targetResult.rows[0];
+            userResult.rows[0];
 
 
         if (
@@ -1446,21 +1405,29 @@ res
         }
 
 
-        const existing =
+        const friendship =
             await pool.query(
                 `
-                SELECT *
+                SELECT id
+
                 FROM friendships
+
                 WHERE
                 (
-                    requester_id = $1
-                    AND addressee_id = $2
+                    user_id = $1
+                    AND
+                    friend_id = $2
                 )
+
                 OR
+
                 (
-                    requester_id = $2
-                    AND addressee_id = $1
+                    user_id = $2
+                    AND
+                    friend_id = $1
                 )
+
+                LIMIT 1
                 `,
                 [
                     req.account.id,
@@ -1470,50 +1437,63 @@ res
 
 
         if (
-            existing.rows.length > 0
+            friendship.rows.length > 0
         ) {
 
-            const friendship =
-                existing.rows[0];
+            return res.status(409).json({
+
+                success: false,
+
+                message:
+                    "You are already friends."
+
+            });
+
+        }
 
 
-            if (
-                friendship.status ===
-                "accepted"
-            ) {
+        const existingRequest =
+            await pool.query(
+                `
+                SELECT
+                    id,
+                    sender_id,
+                    receiver_id,
+                    status
 
-                return res.status(409).json({
+                FROM friend_requests
 
-                    success: false,
+                WHERE
+                (
+                    sender_id = $1
+                    AND
+                    receiver_id = $2
+                )
 
-                    message:
-                        "You are already friends."
+                OR
 
-                });
+                (
+                    sender_id = $2
+                    AND
+                    receiver_id = $1
+                )
 
-            }
+                AND status = 'pending'
+
+                LIMIT 1
+                `,
+                [
+                    req.account.id,
+                    target.id
+                ]
+            );
 
 
-            if (
-                friendship.requester_id ===
-                target.id &&
-                friendship.addressee_id ===
-                req.account.id &&
-                friendship.status ===
-                "pending"
-            ) {
-
-                return res.json({
-
-                    success: true,
-
-                    message:
-                        "This user already sent you a friend request. Accept it instead."
-
-                });
-
-            }
-
+        if (
+            existingRequest
+                .rows
+                .length > 0
+        ) {
 
             return res.status(409).json({
 
@@ -1529,13 +1509,10 @@ res
 
         await pool.query(
             `
-            INSERT INTO friendships
-            (
-                requester_id,
-                addressee_id,
-                status
-            )
-            VALUES ($1, $2, 'pending')
+            INSERT INTO friend_requests
+            (sender_id, receiver_id)
+
+            VALUES ($1, $2)
             `,
             [
                 req.account.id,
@@ -1544,15 +1521,12 @@ res
         );
 
 
-        return res.status(201).json({
+        return res.json({
 
             success: true,
 
             message:
-                "Friend request sent.",
-
-            username:
-                target.username
+                "Friend request sent."
 
         });
 
@@ -1562,6 +1536,7 @@ res
             "Friend request error:",
             error
         );
+
 
         return res.status(500).json({
 
@@ -1584,7 +1559,7 @@ GET FRIEND REQUESTS
 ========================================================= */
 
 app.get(
-"/api/social/friends/requests",
+"/api/friends/requests",
 requireLogin,
 async (
 req,
@@ -1598,26 +1573,28 @@ res
             await pool.query(
                 `
                 SELECT
-                    friendships.id,
-                    accounts.id AS user_id,
-                    accounts.username,
-                    friendships.created_at
+                    friend_requests.id,
 
-                FROM friendships
+                    accounts.username,
+
+                    friend_requests.created_at
+
+                FROM friend_requests
 
                 INNER JOIN accounts
-                    ON accounts.id =
-                        friendships.requester_id
+
+                ON accounts.id =
+                   friend_requests.sender_id
 
                 WHERE
-                    friendships.addressee_id =
-                        $1
+                    friend_requests.receiver_id = $1
 
-                AND friendships.status =
+                AND
+                    friend_requests.status =
                     'pending'
 
                 ORDER BY
-                    friendships.created_at DESC
+                    friend_requests.created_at DESC
                 `,
                 [
                     req.account.id
@@ -1641,6 +1618,7 @@ res
             error
         );
 
+
         return res.status(500).json({
 
             success: false,
@@ -1658,11 +1636,166 @@ res
 );
 
 /* =========================================================
-RESPOND TO FRIEND REQUEST
+ACCEPT FRIEND REQUEST
 ========================================================= */
 
 app.post(
-"/api/social/friends/request/:id",
+"/api/friends/requests/:id/accept",
+requireLogin,
+async (
+req,
+res
+) => {
+
+```
+    const client =
+        await pool.connect();
+
+
+    try {
+
+        await client.query(
+            "BEGIN"
+        );
+
+
+        const requestResult =
+            await client.query(
+                `
+                SELECT
+                    id,
+                    sender_id,
+                    receiver_id
+
+                FROM friend_requests
+
+                WHERE id = $1
+
+                AND receiver_id = $2
+
+                AND status = 'pending'
+
+                FOR UPDATE
+                `,
+                [
+                    req.params.id,
+                    req.account.id
+                ]
+            );
+
+
+        if (
+            requestResult
+                .rows
+                .length === 0
+        ) {
+
+            await client.query(
+                "ROLLBACK"
+            );
+
+
+            return res.status(404).json({
+
+                success: false,
+
+                message:
+                    "Friend request not found."
+
+            });
+
+        }
+
+
+        const request =
+            requestResult.rows[0];
+
+
+        await client.query(
+            `
+            UPDATE friend_requests
+
+            SET status = 'accepted'
+
+            WHERE id = $1
+            `,
+            [
+                request.id
+            ]
+        );
+
+
+        await client.query(
+            `
+            INSERT INTO friendships
+            (user_id, friend_id)
+
+            VALUES
+            ($1, $2),
+            ($2, $1)
+
+            ON CONFLICT DO NOTHING
+            `,
+            [
+                request.sender_id,
+                request.receiver_id
+            ]
+        );
+
+
+        await client.query(
+            "COMMIT"
+        );
+
+
+        return res.json({
+
+            success: true,
+
+            message:
+                "Friend request accepted."
+
+        });
+
+    } catch (error) {
+
+        await client.query(
+            "ROLLBACK"
+        );
+
+
+        console.error(
+            "Accept friend request error:",
+            error
+        );
+
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Unable to accept friend request."
+
+        });
+
+    } finally {
+
+        client.release();
+
+    }
+
+}
+```
+
+);
+
+/* =========================================================
+DECLINE FRIEND REQUEST
+========================================================= */
+
+app.post(
+"/api/friends/requests/:id/decline",
 requireLogin,
 async (
 req,
@@ -1672,72 +1805,26 @@ res
 ```
     try {
 
-        const requestId =
-            Number(
-                req.params.id
-            );
-
-        const action =
-            String(
-                req.body.action ||
-                ""
-            ).toLowerCase();
-
-
-        if (
-            !Number.isInteger(
-                requestId
-            )
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Invalid friend request."
-
-            });
-
-        }
-
-
-        if (
-            action !== "accept" &&
-            action !== "decline"
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Action must be accept or decline."
-
-            });
-
-        }
-
-
         const result =
             await pool.query(
                 `
-                SELECT *
-                FROM friendships
+                DELETE FROM friend_requests
+
                 WHERE id = $1
-                AND addressee_id = $2
-                AND status = 'pending'
+
+                AND receiver_id = $2
+
+                RETURNING id
                 `,
                 [
-                    requestId,
+                    req.params.id,
                     req.account.id
                 ]
             );
 
 
         if (
-            result.rows.length ===
-            0
+            result.rowCount === 0
         ) {
 
             return res.status(404).json({
@@ -1752,66 +1839,29 @@ res
         }
 
 
-        if (
-            action === "accept"
-        ) {
-
-            await pool.query(
-                `
-                UPDATE friendships
-
-                SET
-                    status = 'accepted',
-                    updated_at =
-                        CURRENT_TIMESTAMP
-
-                WHERE id = $1
-                `,
-                [
-                    requestId
-                ]
-            );
-
-        } else {
-
-            await pool.query(
-                `
-                DELETE FROM friendships
-                WHERE id = $1
-                `,
-                [
-                    requestId
-                ]
-            );
-
-        }
-
-
         return res.json({
 
             success: true,
 
             message:
-                action ===
-                "accept"
-                    ? "Friend request accepted."
-                    : "Friend request declined."
+                "Friend request declined."
 
         });
 
     } catch (error) {
 
         console.error(
-            "Friend request response error:",
+            "Decline friend request error:",
             error
         );
+
 
         return res.status(500).json({
 
             success: false,
 
             message:
-                "Unable to respond to friend request."
+                "Unable to decline friend request."
 
         });
 
@@ -1827,7 +1877,7 @@ GET FRIENDS
 ========================================================= */
 
 app.get(
-"/api/social/friends",
+"/api/friends",
 requireLogin,
 async (
 req,
@@ -1841,56 +1891,18 @@ res
             await pool.query(
                 `
                 SELECT
-
                     accounts.id,
-
-                    accounts.username,
-
-                    COALESCE(
-                        user_presence.is_online,
-                        FALSE
-                    ) AS is_online,
-
-                    user_presence.last_seen
+                    accounts.username
 
                 FROM friendships
 
                 INNER JOIN accounts
 
-                    ON accounts.id =
-                        CASE
-
-                            WHEN
-                                friendships.requester_id =
-                                    $1
-
-                            THEN
-                                friendships.addressee_id
-
-                            ELSE
-                                friendships.requester_id
-
-                        END
-
-                LEFT JOIN user_presence
-
-                    ON user_presence.account_id =
-                        accounts.id
+                ON accounts.id =
+                   friendships.friend_id
 
                 WHERE
-
-                (
-                    friendships.requester_id =
-                        $1
-
-                    OR
-
-                    friendships.addressee_id =
-                        $1
-                )
-
-                AND friendships.status =
-                    'accepted'
+                    friendships.user_id = $1
 
                 ORDER BY
                     accounts.username
@@ -1917,6 +1929,7 @@ res
             error
         );
 
+
         return res.status(500).json({
 
             success: false,
@@ -1938,7 +1951,7 @@ REMOVE FRIEND
 ========================================================= */
 
 app.delete(
-"/api/social/friends/:userId",
+"/api/friends/:friendId",
 requireLogin,
 async (
 req,
@@ -1948,75 +1961,30 @@ res
 ```
     try {
 
-        const userId =
-            Number(
-                req.params.userId
-            );
+        await pool.query(
+            `
+            DELETE FROM friendships
 
-
-        if (
-            !Number.isInteger(
-                userId
-            )
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Invalid user."
-
-            });
-
-        }
-
-
-        const result =
-            await pool.query(
-                `
-                DELETE FROM friendships
-
-                WHERE status =
-                    'accepted'
-
-                AND
+            WHERE
                 (
-                    requester_id = $1
-                    AND addressee_id = $2
+                    user_id = $1
+                    AND
+                    friend_id = $2
                 )
 
                 OR
 
                 (
-                    requester_id = $2
-                    AND addressee_id = $1
+                    user_id = $2
+                    AND
+                    friend_id = $1
                 )
-
-                RETURNING id
-                `,
-                [
-                    req.account.id,
-                    userId
-                ]
-            );
-
-
-        if (
-            result.rowCount ===
-            0
-        ) {
-
-            return res.status(404).json({
-
-                success: false,
-
-                message:
-                    "Friendship not found."
-
-            });
-
-        }
+            `,
+            [
+                req.account.id,
+                req.params.friendId
+            ]
+        );
 
 
         return res.json({
@@ -2035,6 +2003,7 @@ res
             error
         );
 
+
         return res.status(500).json({
 
             success: false,
@@ -2052,11 +2021,11 @@ res
 );
 
 /* =========================================================
-SEND MESSAGE
+GET MESSAGE HISTORY
 ========================================================= */
 
-app.post(
-"/api/social/messages",
+app.get(
+"/api/messages/:friendId",
 requireLogin,
 async (
 req,
@@ -2066,21 +2035,15 @@ res
 ```
     try {
 
-        const receiverId =
+        const friendId =
             Number(
-                req.body.receiverId
+                req.params.friendId
             );
-
-        const message =
-            String(
-                req.body.message ||
-                ""
-            ).trim();
 
 
         if (
             !Number.isInteger(
-                receiverId
+                friendId
             )
         ) {
 
@@ -2089,54 +2052,7 @@ res
                 success: false,
 
                 message:
-                    "Invalid recipient."
-
-            });
-
-        }
-
-
-        if (!message) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Message cannot be empty."
-
-            });
-
-        }
-
-
-        if (
-            message.length > 2000
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Message is too long."
-
-            });
-
-        }
-
-
-        if (
-            receiverId ===
-            req.account.id
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "You cannot message yourself."
+                    "Invalid friend ID."
 
             });
 
@@ -2147,34 +2063,24 @@ res
             await pool.query(
                 `
                 SELECT id
+
                 FROM friendships
 
-                WHERE status =
-                    'accepted'
+                WHERE
+                    user_id = $1
 
                 AND
-                (
-                    requester_id = $1
-                    AND addressee_id = $2
-                )
-
-                OR
-
-                (
-                    requester_id = $2
-                    AND addressee_id = $1
-                )
+                    friend_id = $2
                 `,
                 [
                     req.account.id,
-                    receiverId
+                    friendId
                 ]
             );
 
 
         if (
-            friendship.rows.length ===
-            0
+            friendship.rows.length === 0
         ) {
 
             return res.status(403).json({
@@ -2189,273 +2095,63 @@ res
         }
 
 
-        const receiver =
-            await pool.query(
-                `
-                SELECT id, username
-                FROM accounts
-                WHERE id = $1
-                `,
-                [
-                    receiverId
-                ]
-            );
-
-
-        if (
-            receiver.rows.length ===
-            0
-        ) {
-
-            return res.status(404).json({
-
-                success: false,
-
-                message:
-                    "Recipient not found."
-
-            });
-
-        }
-
-
-        const result =
-            await pool.query(
-                `
-                INSERT INTO messages
-                (
-                    sender_id,
-                    receiver_id,
-                    message
-                )
-
-                VALUES
-                ($1, $2, $3)
-
-                RETURNING
-                    id,
-                    sender_id,
-                    receiver_id,
-                    message,
-                    is_read,
-                    created_at
-                `,
-                [
-                    req.account.id,
-                    receiverId,
-                    message
-                ]
-            );
-
-
-        const newMessage =
-            result.rows[0];
-
-
-        /* Send live message through Socket.IO */
-
-        io.to(
-            "user_" +
-            receiverId
-        ).emit(
-            "new_message",
-            {
-
-                id:
-                    newMessage.id,
-
-                senderId:
-                    req.account.id,
-
-                senderUsername:
-                    req.account.username,
-
-                receiverId:
-                    receiverId,
-
-                message:
-                    newMessage.message,
-
-                createdAt:
-                    newMessage.created_at
-
-            }
-        );
-
-
-        return res.status(201).json({
-
-            success: true,
-
-            message:
-                newMessage
-
-        });
-
-    } catch (error) {
-
-        console.error(
-            "Send message error:",
-            error
-        );
-
-        return res.status(500).json({
-
-            success: false,
-
-            message:
-                "Unable to send message."
-
-        });
-
-    }
-
-}
-```
-
-);
-
-/* =========================================================
-GET MESSAGE HISTORY
-========================================================= */
-
-app.get(
-"/api/social/messages/:userId",
-requireLogin,
-async (
-req,
-res
-) => {
-
-```
-    try {
-
-        const userId =
-            Number(
-                req.params.userId
-            );
-
-
-        if (
-            !Number.isInteger(
-                userId
-            )
-        ) {
-
-            return res.status(400).json({
-
-                success: false,
-
-                message:
-                    "Invalid user."
-
-            });
-
-        }
-
-
-        const friendship =
-            await pool.query(
-                `
-                SELECT id
-                FROM friendships
-
-                WHERE status =
-                    'accepted'
-
-                AND
-                (
-                    requester_id = $1
-                    AND addressee_id = $2
-                )
-
-                OR
-
-                (
-                    requester_id = $2
-                    AND addressee_id = $1
-                )
-                `,
-                [
-                    req.account.id,
-                    userId
-                ]
-            );
-
-
-        if (
-            friendship.rows.length ===
-            0
-        ) {
-
-            return res.status(403).json({
-
-                success: false,
-
-                message:
-                    "You can only view messages with friends."
-
-            });
-
-        }
-
-
         const result =
             await pool.query(
                 `
                 SELECT
-                    id,
-                    sender_id,
-                    receiver_id,
-                    message,
-                    is_read,
-                    created_at
+                    messages.id,
+
+                    messages.sender_id,
+
+                    sender.username
+                        AS sender_username,
+
+                    messages.receiver_id,
+
+                    receiver.username
+                        AS receiver_username,
+
+                    messages.message,
+
+                    messages.created_at
 
                 FROM messages
 
-                WHERE
+                INNER JOIN accounts sender
 
+                ON sender.id =
+                   messages.sender_id
+
+                INNER JOIN accounts receiver
+
+                ON receiver.id =
+                   messages.receiver_id
+
+                WHERE
                 (
-                    sender_id = $1
-                    AND receiver_id = $2
+                    messages.sender_id = $1
+                    AND
+                    messages.receiver_id = $2
                 )
 
                 OR
 
                 (
-                    sender_id = $2
-                    AND receiver_id = $1
+                    messages.sender_id = $2
+                    AND
+                    messages.receiver_id = $1
                 )
 
                 ORDER BY
-                    created_at ASC
+                    messages.created_at ASC
 
-                LIMIT 200
+                LIMIT 100
                 `,
                 [
                     req.account.id,
-                    userId
+                    friendId
                 ]
             );
-
-
-        await pool.query(
-            `
-            UPDATE messages
-
-            SET is_read = TRUE
-
-            WHERE
-                sender_id = $1
-
-            AND
-                receiver_id = $2
-            `,
-            [
-                userId,
-                req.account.id
-            ]
-        );
 
 
         return res.json({
@@ -2474,81 +2170,13 @@ res
             error
         );
 
+
         return res.status(500).json({
 
             success: false,
 
             message:
                 "Unable to load messages."
-
-        });
-
-    }
-
-}
-```
-
-);
-
-/* =========================================================
-UNREAD MESSAGE COUNT
-========================================================= */
-
-app.get(
-"/api/social/messages/unread/count",
-requireLogin,
-async (
-req,
-res
-) => {
-
-```
-    try {
-
-        const result =
-            await pool.query(
-                `
-                SELECT
-                    COUNT(*)::INTEGER
-                    AS unread_count
-
-                FROM messages
-
-                WHERE receiver_id =
-                    $1
-
-                AND is_read =
-                    FALSE
-                `,
-                [
-                    req.account.id
-                ]
-            );
-
-
-        return res.json({
-
-            success: true,
-
-            unreadCount:
-                result.rows[0]
-                    .unread_count
-
-        });
-
-    } catch (error) {
-
-        console.error(
-            "Unread count error:",
-            error
-        );
-
-        return res.status(500).json({
-
-            success: false,
-
-            message:
-                "Unable to get unread messages."
 
         });
 
@@ -2597,12 +2225,6 @@ res
             await createApiTokenForAccount(
                 account.id
             );
-
-
-        console.log(
-            "API token created for account: " +
-            account.username
-        );
 
 
         return res.status(201).json({
@@ -2775,7 +2397,7 @@ res
         if (
             parts.length !== 2 ||
             parts[0].toLowerCase() !==
-                "bearer"
+            "bearer"
         ) {
 
             return res.status(400).json({
@@ -2804,7 +2426,9 @@ res
             await pool.query(
                 `
                 DELETE FROM api_tokens
+
                 WHERE token_hash = $1
+
                 RETURNING id
                 `,
                 [
@@ -2814,8 +2438,7 @@ res
 
 
         if (
-            result.rowCount ===
-            0
+            result.rowCount === 0
         ) {
 
             return res.status(404).json({
@@ -2877,7 +2500,10 @@ next
     try {
 
         const cookieHeader =
-            socket.handshake.headers.cookie;
+            socket.handshake
+                .headers
+                .cookie;
+
 
         if (!cookieHeader) {
 
@@ -2892,41 +2518,32 @@ next
 
         const cookies = {};
 
+
         cookieHeader
             .split(";")
             .forEach(
-                part => {
+                cookie => {
 
-                    const index =
-                        part.indexOf("=");
-
-                    if (
-                        index === -1
-                    ) {
-
-                        return;
-
-                    }
+                    const parts =
+                        cookie
+                            .trim()
+                            .split("=");
 
                     const key =
-                        part
-                            .slice(
-                                0,
-                                index
-                            )
-                            .trim();
+                        parts.shift();
 
                     const value =
-                        part
-                            .slice(
-                                index + 1
-                            )
-                            .trim();
+                        parts.join("=");
 
-                    cookies[key] =
-                        decodeURIComponent(
-                            value
-                        );
+
+                    if (key) {
+
+                        cookies[key] =
+                            decodeURIComponent(
+                                value
+                            );
+
+                    }
 
                 }
             );
@@ -2963,16 +2580,15 @@ next
                 FROM sessions
 
                 INNER JOIN accounts
-                    ON accounts.id =
-                        sessions.account_id
+
+                ON accounts.id =
+                   sessions.account_id
 
                 WHERE
-                    sessions.token_hash =
-                        $1
+                    sessions.token_hash = $1
 
                 AND
-                    sessions.expires_at >
-                        NOW()
+                    sessions.expires_at > NOW()
                 `,
                 [
                     tokenHash
@@ -2981,8 +2597,7 @@ next
 
 
         if (
-            result.rows.length ===
-            0
+            result.rows.length === 0
         ) {
 
             return next(
@@ -3007,6 +2622,7 @@ next
             error
         );
 
+
         next(
             new Error(
                 "Authentication failed"
@@ -3021,94 +2637,359 @@ next
 );
 
 /* =========================================================
-SOCKET.IO CONNECTIONS
+ONLINE USERS
+========================================================= */
+
+const onlineUsers =
+new Map();
+
+function setUserOnline(
+accountId,
+socketId
+) {
+
+```
+if (
+    !onlineUsers.has(
+        accountId
+    )
+) {
+
+    onlineUsers.set(
+        accountId,
+        new Set()
+    );
+
+}
+
+
+onlineUsers
+    .get(accountId)
+    .add(socketId);
+```
+
+}
+
+function setUserOffline(
+accountId,
+socketId
+) {
+
+```
+if (
+    !onlineUsers.has(
+        accountId
+    )
+) {
+
+    return;
+
+}
+
+
+const sockets =
+    onlineUsers.get(
+        accountId
+    );
+
+
+sockets.delete(
+    socketId
+);
+
+
+if (
+    sockets.size === 0
+) {
+
+    onlineUsers.delete(
+        accountId
+    );
+
+}
+```
+
+}
+
+function isUserOnline(
+accountId
+) {
+
+```
+return onlineUsers.has(
+    accountId
+);
+```
+
+}
+
+/* =========================================================
+SOCKET.IO CONNECTION
 ========================================================= */
 
 io.on(
 "connection",
-async (
-socket
-) => {
+socket => {
 
 ```
     const account =
         socket.account;
 
 
-    socket.join(
-        "user_" +
-        account.id
-    );
-
-
-    await pool.query(
-        `
-        INSERT INTO user_presence
-        (
-            account_id,
-            is_online,
-            last_seen
-        )
-
-        VALUES
-        ($1, TRUE, CURRENT_TIMESTAMP)
-
-        ON CONFLICT (account_id)
-
-        DO UPDATE SET
-            is_online = TRUE,
-            last_seen =
-                CURRENT_TIMESTAMP
-        `,
-        [
-            account.id
-        ]
+    setUserOnline(
+        account.id,
+        socket.id
     );
 
 
     console.log(
-        "User connected to chat: " +
+        "User connected: " +
         account.username
+    );
+
+
+    socket.emit(
+        "presence",
+        {
+            userId:
+                account.id,
+
+            online: true
+        }
+    );
+
+
+    socket.on(
+        "getPresence",
+        async userId => {
+
+            socket.emit(
+                "presence",
+                {
+                    userId:
+                        Number(
+                            userId
+                        ),
+
+                    online:
+                        isUserOnline(
+                            Number(
+                                userId
+                            )
+                        )
+                }
+            );
+
+        }
+    );
+
+
+    socket.on(
+        "sendMessage",
+        async data => {
+
+            try {
+
+                const receiverId =
+                    Number(
+                        data.receiverId
+                    );
+
+
+                const message =
+                    String(
+                        data.message ||
+                        ""
+                    ).trim();
+
+
+                if (
+                    !Number.isInteger(
+                        receiverId
+                    )
+                ) {
+
+                    return socket.emit(
+                        "messageError",
+                        {
+                            message:
+                                "Invalid receiver."
+                        }
+                    );
+
+                }
+
+
+                if (
+                    !message ||
+                    message.length > 2000
+                ) {
+
+                    return socket.emit(
+                        "messageError",
+                        {
+                            message:
+                                "Message must be between 1 and 2000 characters."
+                        }
+                    );
+
+                }
+
+
+                const friendship =
+                    await pool.query(
+                        `
+                        SELECT id
+
+                        FROM friendships
+
+                        WHERE
+                            user_id = $1
+
+                        AND
+                            friend_id = $2
+                        `,
+                        [
+                            account.id,
+                            receiverId
+                        ]
+                    );
+
+
+                if (
+                    friendship.rows
+                        .length === 0
+                ) {
+
+                    return socket.emit(
+                        "messageError",
+                        {
+                            message:
+                                "You can only message your friends."
+                        }
+                    );
+
+                }
+
+
+                const result =
+                    await pool.query(
+                        `
+                        INSERT INTO messages
+
+                        (
+                            sender_id,
+                            receiver_id,
+                            message
+                        )
+
+                        VALUES
+                        ($1, $2, $3)
+
+                        RETURNING
+                            id,
+                            sender_id,
+                            receiver_id,
+                            message,
+                            created_at
+                        `,
+                        [
+                            account.id,
+                            receiverId,
+                            message
+                        ]
+                    );
+
+
+                const savedMessage =
+                    result.rows[0];
+
+
+                const messageData = {
+
+                    id:
+                        savedMessage.id,
+
+                    senderId:
+                        savedMessage.sender_id,
+
+                    receiverId:
+                        savedMessage.receiver_id,
+
+                    message:
+                        savedMessage.message,
+
+                    createdAt:
+                        savedMessage.created_at
+
+                };
+
+
+                socket.emit(
+                    "newMessage",
+                    messageData
+                );
+
+
+                for (
+                    const [
+                        socketId,
+                        socketSet
+                    ]
+                    of io.sockets.sockets
+                ) {
+
+                    if (
+                        socketSet.account &&
+                        socketSet.account.id ===
+                        receiverId
+                    ) {
+
+                        socketSet.emit(
+                            "newMessage",
+                            messageData
+                        );
+
+                    }
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Socket message error:",
+                    error
+                );
+
+
+                socket.emit(
+                    "messageError",
+                    {
+                        message:
+                            "Unable to send message."
+                    }
+                );
+
+            }
+
+        }
     );
 
 
     socket.on(
         "disconnect",
-        async () => {
+        () => {
 
-            try {
-
-                await pool.query(
-                    `
-                    UPDATE user_presence
-
-                    SET
-                        is_online = FALSE,
-                        last_seen =
-                            CURRENT_TIMESTAMP
-
-                    WHERE account_id =
-                        $1
-                    `,
-                    [
-                        account.id
-                    ]
-                );
+            setUserOffline(
+                account.id,
+                socket.id
+            );
 
 
-                console.log(
-                    "User disconnected from chat: " +
-                    account.username
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Presence update error:",
-                    error
-                );
-
-            }
+            console.log(
+                "User disconnected: " +
+                account.username
+            );
 
         }
     );
@@ -3131,14 +3012,14 @@ try {
         await pool.query(
             `
             DELETE FROM sessions
+
             WHERE expires_at <= NOW()
             `
         );
 
 
     if (
-        sessionResult.rowCount >
-        0
+        sessionResult.rowCount > 0
     ) {
 
         console.log(
@@ -3154,14 +3035,14 @@ try {
         await pool.query(
             `
             DELETE FROM api_tokens
+
             WHERE expires_at <= NOW()
             `
         );
 
 
     if (
-        apiTokenResult.rowCount >
-        0
+        apiTokenResult.rowCount > 0
     ) {
 
         console.log(
@@ -3186,7 +3067,9 @@ try {
 
 setInterval(
 cleanExpiredSessions,
-60 * 60 * 1000
+60 *
+60 *
+1000
 );
 
 /* =========================================================
@@ -3203,8 +3086,7 @@ res
 ```
     res.json({
 
-        online:
-            true,
+        online: true,
 
         service:
             "Core Games Accounts",
@@ -3218,17 +3100,14 @@ res
         sessions:
             "PostgreSQL",
 
+        api:
+            "Core Games API v1",
+
         social:
             true,
 
-        chat:
-            true,
-
-        realtime:
-            "Socket.IO",
-
-        api:
-            "Core Games API v1"
+        socketIO:
+            true
 
     });
 
@@ -3288,7 +3167,7 @@ server.listen(
         );
 
         console.log(
-            "Real-time chat enabled."
+            "Socket.IO enabled."
         );
 
     }
