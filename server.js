@@ -1,4 +1,4 @@
-```javascript
+
 const express = require("express");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
@@ -3956,4 +3956,3 @@ async function startServer() {
 
 
 startServer();
-```
