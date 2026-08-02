@@ -1,3 +1,4 @@
+```javascript
 const express = require("express");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
@@ -24,6 +25,17 @@ const SESSION_DURATION_MS =
 const API_TOKEN_DURATION_DAYS = 30;
 const API_TOKEN_DURATION_MS =
     API_TOKEN_DURATION_DAYS * 24 * 60 * 60 * 1000;
+
+/*
+Launcher handoff tokens are intentionally short-lived.
+They are also single-use.
+*/
+
+const HANDOFF_TOKEN_DURATION_MS =
+    2 * 60 * 1000;
+
+const LAUNCHER_URL =
+    "https://core-launcher-hb1m.onrender.com";
 
 
 /* =========================================================
@@ -61,19 +73,25 @@ POSTGRESQL DATABASE
 ========================================================= */
 
 if (!process.env.DATABASE_URL) {
+
     console.error(
         "ERROR: DATABASE_URL environment variable is not set."
     );
 
     process.exit(1);
+
 }
 
+
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+
+    connectionString:
+        process.env.DATABASE_URL,
 
     ssl: {
         rejectUnauthorized: false
     }
+
 });
 
 
@@ -83,34 +101,56 @@ MIDDLEWARE
 
 app.use(
     cors({
-        origin: function (origin, callback) {
 
-            /*
-            Requests without an Origin header can happen
-            from server-side tools and direct requests.
-            */
+        origin:
+            function (
+                origin,
+                callback
+            ) {
 
-            if (!origin) {
-                return callback(null, true);
-            }
+                if (!origin) {
 
-            if (allowedOrigins.includes(origin)) {
-                return callback(null, true);
-            }
+                    return callback(
+                        null,
+                        true
+                    );
 
-            return callback(
-                new Error(
-                    "CORS origin not allowed."
-                )
-            );
+                }
 
-        },
 
-        credentials: true
+                if (
+                    allowedOrigins.includes(
+                        origin
+                    )
+                ) {
+
+                    return callback(
+                        null,
+                        true
+                    );
+
+                }
+
+
+                return callback(
+                    new Error(
+                        "CORS origin not allowed."
+                    )
+                );
+
+            },
+
+        credentials:
+            true
+
     })
 );
 
-app.use(express.json());
+
+app.use(
+    express.json()
+);
+
 
 app.use(
     express.urlencoded({
@@ -118,7 +158,10 @@ app.use(
     })
 );
 
-app.use(cookieParser());
+
+app.use(
+    cookieParser()
+);
 
 
 /* =========================================================
@@ -182,6 +225,34 @@ async function initializeDatabase() {
                     ON DELETE CASCADE,
 
                 expires_at TIMESTAMP NOT NULL,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+
+        /*
+        LOGIN HANDOFF TOKENS
+
+        These are temporary tokens used when the
+        user logs in through the Core Games Accounts
+        website and then returns to the Core Launcher.
+        */
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS handoff_tokens (
+                id SERIAL PRIMARY KEY,
+
+                token_hash TEXT UNIQUE NOT NULL,
+
+                account_id INTEGER NOT NULL
+                    REFERENCES accounts(id)
+                    ON DELETE CASCADE,
+
+                expires_at TIMESTAMP NOT NULL,
+
+                used BOOLEAN DEFAULT FALSE,
 
                 created_at TIMESTAMP
                     DEFAULT CURRENT_TIMESTAMP
@@ -282,6 +353,20 @@ async function initializeDatabase() {
 
         await pool.query(`
             CREATE INDEX IF NOT EXISTS
+            handoff_tokens_token_hash_index
+            ON handoff_tokens(token_hash)
+        `);
+
+
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS
+            handoff_tokens_expires_at_index
+            ON handoff_tokens(expires_at)
+        `);
+
+
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS
             friend_requests_receiver_index
             ON friend_requests(receiver_id)
         `);
@@ -308,6 +393,7 @@ async function initializeDatabase() {
         console.log(
             "PostgreSQL database initialized successfully."
         );
+
 
     } catch (error) {
 
@@ -346,13 +432,19 @@ function hashSessionToken(token) {
 }
 
 
-async function createSession(accountId) {
+async function createSession(
+    accountId
+) {
 
     const token =
         createSessionToken();
 
+
     const tokenHash =
-        hashSessionToken(token);
+        hashSessionToken(
+            token
+        );
+
 
     const expiresAt =
         new Date(
@@ -386,19 +478,25 @@ async function createSession(accountId) {
 }
 
 
-async function getAccountFromSession(req) {
+async function getAccountFromSession(
+    req
+) {
 
     const token =
         req.cookies.core_session;
 
 
     if (!token) {
+
         return null;
+
     }
 
 
     const tokenHash =
-        hashSessionToken(token);
+        hashSessionToken(
+            token
+        );
 
 
     const result =
@@ -446,52 +544,178 @@ async function getAccountFromSession(req) {
 CROSS-SITE SESSION COOKIE
 ========================================================= */
 
-function setSessionCookie(res, token) {
+function setSessionCookie(
+    res,
+    token
+) {
 
     res.cookie(
         "core_session",
         token,
         {
-            httpOnly: true,
 
-            /*
-            Required because the launcher and accounts
-            server are on different Render domains.
-            */
+            httpOnly:
+                true,
 
-            secure: true,
+            secure:
+                true,
 
-            /*
-            Allows the cookie to be sent in
-            cross-site credentialed requests.
-            */
-
-            sameSite: "none",
+            sameSite:
+                "none",
 
             maxAge:
                 SESSION_DURATION_MS,
 
-            path: "/"
+            path:
+                "/"
+
         }
     );
 
 }
 
 
-function clearSessionCookie(res) {
+function clearSessionCookie(
+    res
+) {
 
     res.clearCookie(
         "core_session",
         {
-            httpOnly: true,
 
-            secure: true,
+            httpOnly:
+                true,
 
-            sameSite: "none",
+            secure:
+                true,
 
-            path: "/"
+            sameSite:
+                "none",
+
+            path:
+                "/"
+
         }
     );
+
+}
+
+
+/* =========================================================
+LOGIN HANDOFF TOKEN HELPERS
+========================================================= */
+
+function createHandoffToken() {
+
+    return crypto
+        .randomBytes(48)
+        .toString("hex");
+
+}
+
+
+function hashHandoffToken(
+    token
+) {
+
+    return crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+
+}
+
+
+async function createHandoffTokenForAccount(
+    accountId
+) {
+
+    const token =
+        createHandoffToken();
+
+
+    const tokenHash =
+        hashHandoffToken(
+            token
+        );
+
+
+    const expiresAt =
+        new Date(
+            Date.now() +
+            HANDOFF_TOKEN_DURATION_MS
+        );
+
+
+    await pool.query(
+        `
+        INSERT INTO handoff_tokens
+        (
+            token_hash,
+            account_id,
+            expires_at,
+            used
+        )
+
+        VALUES
+        ($1, $2, $3, FALSE)
+        `,
+        [
+            tokenHash,
+            accountId,
+            expiresAt
+        ]
+    );
+
+
+    return token;
+
+}
+
+
+/* =========================================================
+REDIRECT TO LAUNCHER
+========================================================= */
+
+async function redirectToLauncher(
+    res,
+    accountId
+) {
+
+    try {
+
+        const handoffToken =
+            await createHandoffTokenForAccount(
+                accountId
+            );
+
+
+        const redirectURL =
+            LAUNCHER_URL +
+            "/?handoff=" +
+            encodeURIComponent(
+                handoffToken
+            );
+
+
+        return res.redirect(
+            redirectURL
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Launcher handoff creation error:",
+            error
+        );
+
+
+        return res.status(500).send(
+            "Unable to complete launcher login."
+        );
+
+    }
 
 }
 
@@ -512,7 +736,9 @@ function createApiToken() {
 }
 
 
-function hashApiToken(token) {
+function hashApiToken(
+    token
+) {
 
     return crypto
         .createHash("sha256")
@@ -522,13 +748,19 @@ function hashApiToken(token) {
 }
 
 
-async function createApiTokenForAccount(accountId) {
+async function createApiTokenForAccount(
+    accountId
+) {
 
     const token =
         createApiToken();
 
+
     const tokenHash =
-        hashApiToken(token);
+        hashApiToken(
+            token
+        );
+
 
     const expiresAt =
         new Date(
@@ -558,21 +790,28 @@ async function createApiTokenForAccount(accountId) {
 
 
     return {
+
         token,
+
         expiresAt
+
     };
 
 }
 
 
-async function getAccountFromApiToken(req) {
+async function getAccountFromApiToken(
+    req
+) {
 
     const authorization =
         req.headers.authorization;
 
 
     if (!authorization) {
+
         return null;
+
     }
 
 
@@ -595,12 +834,16 @@ async function getAccountFromApiToken(req) {
 
 
     if (!token) {
+
         return null;
+
     }
 
 
     const tokenHash =
-        hashApiToken(token);
+        hashApiToken(
+            token
+        );
 
 
     const result =
@@ -650,7 +893,10 @@ REGISTER
 
 app.post(
     "/api/register",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -658,6 +904,7 @@ app.post(
                 String(
                     req.body.username || ""
                 ).trim();
+
 
             const password =
                 String(
@@ -668,9 +915,13 @@ app.post(
             if (!username) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Please enter a username."
+
                 });
 
             }
@@ -682,9 +933,13 @@ app.post(
             ) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Username must be between 3 and 20 characters."
+
                 });
 
             }
@@ -697,9 +952,13 @@ app.post(
             ) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Username can only contain letters, numbers, and underscores."
+
                 });
 
             }
@@ -708,20 +967,30 @@ app.post(
             if (!password) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Please enter a password."
+
                 });
 
             }
 
 
-            if (password.length < 8) {
+            if (
+                password.length < 8
+            ) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Password must be at least 8 characters."
+
                 });
 
             }
@@ -749,9 +1018,13 @@ app.post(
             ) {
 
                 return res.status(409).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "That username is already taken."
+
                 });
 
             }
@@ -810,12 +1083,36 @@ app.post(
             );
 
 
+            /*
+            If the user came from the launcher,
+            send them back through a one-time
+            handoff token.
+            */
+
+            if (
+                req.query.returnTo ===
+                "launcher"
+            ) {
+
+                return redirectToLauncher(
+                    res,
+                    account.id
+                );
+
+            }
+
+
             return res.status(201).json({
-                success: true,
+
+                success:
+                    true,
+
                 message:
                     "Account created successfully.",
+
                 username:
                     account.username
+
             });
 
 
@@ -828,9 +1125,13 @@ app.post(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "An error occurred while creating your account."
+
             });
 
         }
@@ -845,7 +1146,10 @@ LOGIN
 
 app.post(
     "/api/login",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -853,6 +1157,7 @@ app.post(
                 String(
                     req.body.username || ""
                 ).trim();
+
 
             const password =
                 String(
@@ -866,9 +1171,13 @@ app.post(
             ) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Please enter your username and password."
+
                 });
 
             }
@@ -901,9 +1210,13 @@ app.post(
             if (!account) {
 
                 return res.status(401).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Invalid username or password."
+
                 });
 
             }
@@ -919,9 +1232,13 @@ app.post(
             if (!passwordMatches) {
 
                 return res.status(401).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Invalid username or password."
+
                 });
 
             }
@@ -945,12 +1262,36 @@ app.post(
             );
 
 
+            /*
+            If the user came from the launcher,
+            create a one-time handoff token
+            and redirect them back to the launcher.
+            */
+
+            if (
+                req.query.returnTo ===
+                "launcher"
+            ) {
+
+                return redirectToLauncher(
+                    res,
+                    account.id
+                );
+
+            }
+
+
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 message:
                     "Login successful.",
+
                 username:
                     account.username
+
             });
 
 
@@ -963,9 +1304,227 @@ app.post(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "An error occurred while logging in."
+
+            });
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+LOGIN HANDOFF EXCHANGE
+========================================================= */
+
+app.post(
+    "/api/handoff/exchange",
+    async (
+        req,
+        res
+    ) => {
+
+        try {
+
+            const token =
+                String(
+                    req.body.token || ""
+                ).trim();
+
+
+            if (!token) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Handoff token is required."
+
+                });
+
+            }
+
+
+            const tokenHash =
+                hashHandoffToken(
+                    token
+                );
+
+
+            const result =
+                await pool.query(
+                    `
+                    SELECT
+                        handoff_tokens.id
+                            AS handoff_id,
+
+                        handoff_tokens.account_id,
+
+                        accounts.username,
+
+                        accounts.created_at
+
+                    FROM handoff_tokens
+
+                    INNER JOIN accounts
+                        ON accounts.id =
+                           handoff_tokens.account_id
+
+                    WHERE
+                        handoff_tokens.token_hash = $1
+
+                    AND
+                        handoff_tokens.expires_at > NOW()
+
+                    AND
+                        handoff_tokens.used = FALSE
+
+                    LIMIT 1
+                    `,
+                    [
+                        tokenHash
+                    ]
+                );
+
+
+            if (
+                result.rows.length === 0
+            ) {
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Invalid, expired, or already used handoff token."
+
+                });
+
+            }
+
+
+            const account =
+                result.rows[0];
+
+
+            /*
+            Mark the token as used BEFORE
+            creating the new launcher session.
+
+            This prevents the same handoff
+            token from being reused.
+            */
+
+            const updateResult =
+                await pool.query(
+                    `
+                    UPDATE handoff_tokens
+
+                    SET
+                        used = TRUE
+
+                    WHERE
+                        id = $1
+
+                    AND
+                        used = FALSE
+
+                    RETURNING id
+                    `,
+                    [
+                        account.handoff_id
+                    ]
+                );
+
+
+            if (
+                updateResult.rowCount === 0
+            ) {
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "This handoff token has already been used."
+
+                });
+
+            }
+
+
+            /*
+            Create a normal Core Games session.
+
+            The launcher can then use this session
+            with /api/me.
+            */
+
+            const sessionToken =
+                await createSession(
+                    account.account_id
+                );
+
+
+            setSessionCookie(
+                res,
+                sessionToken
+            );
+
+
+            console.log(
+                "Launcher login handoff completed for: " +
+                account.username
+            );
+
+
+            return res.json({
+
+                success:
+                    true,
+
+                user: {
+
+                    id:
+                        account.account_id,
+
+                    username:
+                        account.username,
+
+                    createdAt:
+                        account.created_at
+
+                }
+
+            });
+
+
+        } catch (error) {
+
+            console.error(
+                "Login handoff exchange error:",
+                error
+            );
+
+
+            return res.status(500).json({
+
+                success:
+                    false,
+
+                message:
+                    "Unable to complete login handoff."
+
             });
 
         }
@@ -980,7 +1539,10 @@ CHECK CURRENT SESSION
 
 app.get(
     "/api/me",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -993,17 +1555,25 @@ app.get(
             if (!account) {
 
                 return res.status(401).json({
-                    success: false,
-                    loggedIn: false
+
+                    success:
+                        false,
+
+                    loggedIn:
+                        false
+
                 });
 
             }
 
 
             return res.json({
-                success: true,
 
-                loggedIn: true,
+                success:
+                    true,
+
+                loggedIn:
+                    true,
 
                 username:
                     account.username,
@@ -1013,6 +1583,7 @@ app.get(
 
                 sessionExpiresAt:
                     account.expires_at
+
             });
 
 
@@ -1025,9 +1596,13 @@ app.get(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to check login status."
+
             });
 
         }
@@ -1042,7 +1617,10 @@ SESSION ALIAS
 
 app.get(
     "/api/session",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -1055,17 +1633,25 @@ app.get(
             if (!account) {
 
                 return res.status(401).json({
-                    success: false,
-                    loggedIn: false
+
+                    success:
+                        false,
+
+                    loggedIn:
+                        false
+
                 });
 
             }
 
 
             return res.json({
-                success: true,
 
-                loggedIn: true,
+                success:
+                    true,
+
+                loggedIn:
+                    true,
 
                 username:
                     account.username,
@@ -1075,6 +1661,7 @@ app.get(
 
                 sessionExpiresAt:
                     account.expires_at
+
             });
 
 
@@ -1087,9 +1674,13 @@ app.get(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to check session."
+
             });
 
         }
@@ -1104,7 +1695,10 @@ LOGOUT
 
 app.post(
     "/api/logout",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -1141,9 +1735,13 @@ app.post(
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 message:
                     "Logged out successfully."
+
             });
 
 
@@ -1161,9 +1759,13 @@ app.post(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "An error occurred while logging out."
+
             });
 
         }
@@ -1193,9 +1795,13 @@ async function requireLogin(
         if (!account) {
 
             return res.status(401).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "You must be logged in."
+
             });
 
         }
@@ -1217,9 +1823,13 @@ async function requireLogin(
 
 
         return res.status(500).json({
-            success: false,
+
+            success:
+                false,
+
             message:
                 "Unable to authenticate account."
+
         });
 
     }
@@ -1234,7 +1844,10 @@ USER SEARCH
 app.get(
     "/api/users/search",
     requireLogin,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -1244,11 +1857,18 @@ app.get(
                 ).trim();
 
 
-            if (query.length < 2) {
+            if (
+                query.length < 2
+            ) {
 
                 return res.json({
-                    success: true,
-                    users: []
+
+                    success:
+                        true,
+
+                    users:
+                        []
+
                 });
 
             }
@@ -1282,9 +1902,13 @@ app.get(
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 users:
                     result.rows
+
             });
 
 
@@ -1297,9 +1921,13 @@ app.get(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to search users."
+
             });
 
         }
@@ -1315,7 +1943,10 @@ SEND FRIEND REQUEST
 app.post(
     "/api/friends/request",
     requireLogin,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -1328,9 +1959,13 @@ app.post(
             if (!username) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Username is required."
+
                 });
 
             }
@@ -1360,9 +1995,13 @@ app.post(
             ) {
 
                 return res.status(404).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "User not found."
+
                 });
 
             }
@@ -1378,9 +2017,13 @@ app.post(
             ) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "You cannot add yourself."
+
                 });
 
             }
@@ -1422,9 +2065,13 @@ app.post(
             ) {
 
                 return res.status(409).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "You are already friends."
+
                 });
 
             }
@@ -1475,9 +2122,13 @@ app.post(
             ) {
 
                 return res.status(409).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "A friend request already exists."
+
                 });
 
             }
@@ -1502,9 +2153,13 @@ app.post(
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 message:
                     "Friend request sent."
+
             });
 
 
@@ -1517,9 +2172,13 @@ app.post(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to send friend request."
+
             });
 
         }
@@ -1535,7 +2194,10 @@ GET FRIEND REQUESTS
 app.get(
     "/api/friends/requests",
     requireLogin,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -1570,9 +2232,13 @@ app.get(
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 requests:
                     result.rows
+
             });
 
 
@@ -1585,9 +2251,13 @@ app.get(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to load friend requests."
+
             });
 
         }
@@ -1603,7 +2273,10 @@ ACCEPT FRIEND REQUEST
 app.post(
     "/api/friends/requests/:id/accept",
     requireLogin,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         const client =
             await pool.connect();
@@ -1654,9 +2327,13 @@ app.post(
 
 
                 return res.status(404).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Friend request not found."
+
                 });
 
             }
@@ -1709,9 +2386,13 @@ app.post(
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 message:
                     "Friend request accepted."
+
             });
 
 
@@ -1729,9 +2410,13 @@ app.post(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to accept friend request."
+
             });
 
 
@@ -1752,7 +2437,10 @@ DECLINE FRIEND REQUEST
 app.post(
     "/api/friends/requests/:id/decline",
     requireLogin,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -1781,18 +2469,26 @@ app.post(
             ) {
 
                 return res.status(404).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Friend request not found."
+
                 });
 
             }
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 message:
                     "Friend request declined."
+
             });
 
 
@@ -1805,9 +2501,13 @@ app.post(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to decline friend request."
+
             });
 
         }
@@ -1823,7 +2523,10 @@ GET FRIENDS
 app.get(
     "/api/friends",
     requireLogin,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -1853,9 +2556,13 @@ app.get(
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 friends:
                     result.rows
+
             });
 
 
@@ -1868,9 +2575,13 @@ app.get(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to load friends."
+
             });
 
         }
@@ -1886,7 +2597,10 @@ REMOVE FRIEND
 app.delete(
     "/api/friends/:friendId",
     requireLogin,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -1917,9 +2631,13 @@ app.delete(
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 message:
                     "Friend removed."
+
             });
 
 
@@ -1932,9 +2650,13 @@ app.delete(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to remove friend."
+
             });
 
         }
@@ -1950,7 +2672,10 @@ GET MESSAGE HISTORY
 app.get(
     "/api/messages/:friendId",
     requireLogin,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -1967,9 +2692,13 @@ app.get(
             ) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Invalid friend ID."
+
                 });
 
             }
@@ -2000,9 +2729,13 @@ app.get(
             ) {
 
                 return res.status(403).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "You can only message your friends."
+
                 });
 
             }
@@ -2066,9 +2799,13 @@ app.get(
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 messages:
                     result.rows
+
             });
 
 
@@ -2081,9 +2818,13 @@ app.get(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to load messages."
+
             });
 
         }
@@ -2098,7 +2839,10 @@ CREATE API TOKEN
 
 app.post(
     "/api/v1/tokens",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -2111,9 +2855,13 @@ app.post(
             if (!account) {
 
                 return res.status(401).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "You must be logged in to create an API token."
+
                 });
 
             }
@@ -2127,7 +2875,8 @@ app.post(
 
             return res.status(201).json({
 
-                success: true,
+                success:
+                    true,
 
                 token:
                     apiToken.token,
@@ -2156,9 +2905,13 @@ app.post(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to create API token."
+
             });
 
         }
@@ -2173,7 +2926,10 @@ VERIFY API TOKEN
 
 app.get(
     "/api/v1/me",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -2187,7 +2943,8 @@ app.get(
 
                 return res.status(401).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     authenticated:
                         false,
@@ -2202,7 +2959,8 @@ app.get(
 
             return res.json({
 
-                success: true,
+                success:
+                    true,
 
                 authenticated:
                     true,
@@ -2236,7 +2994,8 @@ app.get(
 
             return res.status(500).json({
 
-                success: false,
+                success:
+                    false,
 
                 authenticated:
                     false,
@@ -2258,7 +3017,10 @@ REVOKE API TOKEN
 
 app.delete(
     "/api/v1/tokens",
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
 
         try {
 
@@ -2269,9 +3031,13 @@ app.delete(
             if (!authorization) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Authorization header is required."
+
                 });
 
             }
@@ -2287,9 +3053,13 @@ app.delete(
             ) {
 
                 return res.status(400).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "Invalid Authorization header."
+
                 });
 
             }
@@ -2326,18 +3096,26 @@ app.delete(
             ) {
 
                 return res.status(404).json({
-                    success: false,
+
+                    success:
+                        false,
+
                     message:
                         "API token not found."
+
                 });
 
             }
 
 
             return res.json({
-                success: true,
+
+                success:
+                    true,
+
                 message:
                     "API token revoked successfully."
+
             });
 
 
@@ -2350,9 +3128,13 @@ app.delete(
 
 
             return res.status(500).json({
-                success: false,
+
+                success:
+                    false,
+
                 message:
                     "Unable to revoke API token."
+
             });
 
         }
@@ -2366,7 +3148,10 @@ SOCKET.IO AUTHENTICATION
 ========================================================= */
 
 io.use(
-    async (socket, next) => {
+    async (
+        socket,
+        next
+    ) => {
 
         try {
 
@@ -2618,11 +3403,13 @@ io.on(
         socket.emit(
             "presence",
             {
+
                 userId:
                     account.id,
 
                 online:
                     true
+
             }
         );
 
@@ -2683,8 +3470,10 @@ io.on(
                         return socket.emit(
                             "messageError",
                             {
+
                                 message:
                                     "Invalid receiver."
+
                             }
                         );
 
@@ -2699,8 +3488,10 @@ io.on(
                         return socket.emit(
                             "messageError",
                             {
+
                                 message:
                                     "You cannot message yourself."
+
                             }
                         );
 
@@ -2715,8 +3506,10 @@ io.on(
                         return socket.emit(
                             "messageError",
                             {
+
                                 message:
                                     "Message must be between 1 and 2000 characters."
+
                             }
                         );
 
@@ -2750,8 +3543,10 @@ io.on(
                         return socket.emit(
                             "messageError",
                             {
+
                                 message:
                                     "You can only message your friends."
+
                             }
                         );
 
@@ -2852,8 +3647,10 @@ io.on(
                     socket.emit(
                         "messageError",
                         {
+
                             message:
                                 "Unable to send message."
+
                         }
                     );
 
@@ -2886,7 +3683,8 @@ io.on(
 
 
 /* =========================================================
-CLEAN EXPIRED SESSIONS AND API TOKENS
+CLEAN EXPIRED SESSIONS, API TOKENS,
+AND HANDOFF TOKENS
 ========================================================= */
 
 async function cleanExpiredSessions() {
@@ -2909,9 +3707,11 @@ async function cleanExpiredSessions() {
         ) {
 
             console.log(
+
                 "Cleaned " +
                 sessionResult.rowCount +
                 " expired session(s)."
+
             );
 
         }
@@ -2933,9 +3733,40 @@ async function cleanExpiredSessions() {
         ) {
 
             console.log(
+
                 "Cleaned " +
                 apiTokenResult.rowCount +
                 " expired API token(s)."
+
+            );
+
+        }
+
+
+        const handoffResult =
+            await pool.query(
+                `
+                DELETE FROM handoff_tokens
+
+                WHERE
+                    expires_at <= NOW()
+
+                OR
+                    used = TRUE
+                `
+            );
+
+
+        if (
+            handoffResult.rowCount > 0
+        ) {
+
+            console.log(
+
+                "Cleaned " +
+                handoffResult.rowCount +
+                " expired or used handoff token(s)."
+
             );
 
         }
@@ -2944,8 +3775,11 @@ async function cleanExpiredSessions() {
     } catch (error) {
 
         console.error(
-            "Session and API token cleanup error:",
+
+            "Session, API token, and handoff cleanup error:",
+
             error
+
         );
 
     }
@@ -2965,7 +3799,10 @@ HEALTH CHECK
 
 app.get(
     "/api/health",
-    (req, res) => {
+    (
+        req,
+        res
+    ) => {
 
         res.json({
 
@@ -2990,7 +3827,10 @@ STATUS API
 
 app.get(
     "/api/status",
-    (req, res) => {
+    (
+        req,
+        res
+    ) => {
 
         res.json({
 
@@ -3019,7 +3859,7 @@ app.get(
                 true,
 
             launcher:
-                "https://core-launcher-hb1m.onrender.com"
+                LAUNCHER_URL
 
         });
 
@@ -3032,7 +3872,10 @@ FALLBACK
 ========================================================= */
 
 app.use(
-    (req, res) => {
+    (
+        req,
+        res
+    ) => {
 
         res.sendFile(
             path.join(
@@ -3063,8 +3906,10 @@ async function startServer() {
         () => {
 
             console.log(
+
                 "Core Games Accounts server running on port " +
                 PORT
+
             );
 
 
@@ -3080,6 +3925,11 @@ async function startServer() {
 
             console.log(
                 "Cross-site launcher authentication enabled."
+            );
+
+
+            console.log(
+                "One-time launcher handoff authentication enabled."
             );
 
 
@@ -3106,3 +3956,4 @@ async function startServer() {
 
 
 startServer();
+```
