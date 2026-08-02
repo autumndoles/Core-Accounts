@@ -25,13 +25,24 @@ const API_TOKEN_DURATION_DAYS = 30;
 const API_TOKEN_DURATION_MS =
     API_TOKEN_DURATION_DAYS * 24 * 60 * 60 * 1000;
 
+
+/* =========================================================
+RENDER / PROXY CONFIGURATION
+========================================================= */
+
+app.set("trust proxy", 1);
+
+
 /* =========================================================
 ALLOWED FRONTEND ORIGINS
 ========================================================= */
 
 const allowedOrigins = [
+    "https://core-launcher-hb1m.onrender.com",
+    "https://core-accounts.onrender.com",
     "http://localhost:3000"
 ];
+
 
 /* =========================================================
 SOCKET.IO
@@ -43,6 +54,7 @@ const io = new Server(server, {
         credentials: true
     }
 });
+
 
 /* =========================================================
 POSTGRESQL DATABASE
@@ -64,6 +76,7 @@ const pool = new Pool({
     }
 });
 
+
 /* =========================================================
 MIDDLEWARE
 ========================================================= */
@@ -71,6 +84,12 @@ MIDDLEWARE
 app.use(
     cors({
         origin: function (origin, callback) {
+
+            /*
+            Requests without an Origin header can happen
+            from server-side tools and direct requests.
+            */
+
             if (!origin) {
                 return callback(null, true);
             }
@@ -80,8 +99,11 @@ app.use(
             }
 
             return callback(
-                new Error("CORS origin not allowed.")
+                new Error(
+                    "CORS origin not allowed."
+                )
             );
+
         },
 
         credentials: true
@@ -98,22 +120,29 @@ app.use(
 
 app.use(cookieParser());
 
+
 /* =========================================================
-SERVE WEBSITE
+SERVE ACCOUNTS WEBSITE
 ========================================================= */
 
 app.use(
     express.static(
-        path.join(__dirname, "public")
+        path.join(
+            __dirname,
+            "public"
+        )
     )
 );
+
 
 /* =========================================================
 DATABASE SETUP
 ========================================================= */
 
 async function initializeDatabase() {
+
     try {
+
         await pool.query(`
             CREATE TABLE IF NOT EXISTS accounts (
                 id SERIAL PRIMARY KEY,
@@ -123,29 +152,42 @@ async function initializeDatabase() {
             )
         `);
 
+
         await pool.query(`
             CREATE TABLE IF NOT EXISTS sessions (
                 id SERIAL PRIMARY KEY,
+
                 token_hash TEXT UNIQUE NOT NULL,
+
                 account_id INTEGER NOT NULL
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
+
                 expires_at TIMESTAMP NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS api_tokens (
                 id SERIAL PRIMARY KEY,
+
                 token_hash TEXT UNIQUE NOT NULL,
+
                 account_id INTEGER NOT NULL
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
+
                 expires_at TIMESTAMP NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS friend_requests (
@@ -169,6 +211,7 @@ async function initializeDatabase() {
             )
         `);
 
+
         await pool.query(`
             CREATE TABLE IF NOT EXISTS friendships (
                 id SERIAL PRIMARY KEY,
@@ -187,6 +230,7 @@ async function initializeDatabase() {
                 UNIQUE(user_id, friend_id)
             )
         `);
+
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS messages (
@@ -207,11 +251,13 @@ async function initializeDatabase() {
             )
         `);
 
+
         await pool.query(`
             CREATE INDEX IF NOT EXISTS
             sessions_token_hash_index
             ON sessions(token_hash)
         `);
+
 
         await pool.query(`
             CREATE INDEX IF NOT EXISTS
@@ -219,11 +265,13 @@ async function initializeDatabase() {
             ON sessions(expires_at)
         `);
 
+
         await pool.query(`
             CREATE INDEX IF NOT EXISTS
             api_tokens_token_hash_index
             ON api_tokens(token_hash)
         `);
+
 
         await pool.query(`
             CREATE INDEX IF NOT EXISTS
@@ -231,17 +279,20 @@ async function initializeDatabase() {
             ON api_tokens(expires_at)
         `);
 
+
         await pool.query(`
             CREATE INDEX IF NOT EXISTS
             friend_requests_receiver_index
             ON friend_requests(receiver_id)
         `);
 
+
         await pool.query(`
             CREATE INDEX IF NOT EXISTS
             friendships_user_index
             ON friendships(user_id)
         `);
+
 
         await pool.query(`
             CREATE INDEX IF NOT EXISTS
@@ -253,39 +304,52 @@ async function initializeDatabase() {
             )
         `);
 
+
         console.log(
             "PostgreSQL database initialized successfully."
         );
 
     } catch (error) {
+
         console.error(
             "Database initialization error:",
             error
         );
 
         process.exit(1);
+
     }
+
 }
+
 
 /* =========================================================
 SESSION HELPERS
 ========================================================= */
 
 function createSessionToken() {
+
     return crypto
         .randomBytes(32)
         .toString("hex");
+
 }
 
+
 function hashSessionToken(token) {
+
     return crypto
         .createHash("sha256")
         .update(token)
         .digest("hex");
+
 }
 
+
 async function createSession(accountId) {
-    const token = createSessionToken();
+
+    const token =
+        createSessionToken();
 
     const tokenHash =
         hashSessionToken(token);
@@ -295,6 +359,7 @@ async function createSession(accountId) {
             Date.now() +
             SESSION_DURATION_MS
         );
+
 
     await pool.query(
         `
@@ -315,19 +380,26 @@ async function createSession(accountId) {
         ]
     );
 
+
     return token;
+
 }
 
+
 async function getAccountFromSession(req) {
+
     const token =
         req.cookies.core_session;
+
 
     if (!token) {
         return null;
     }
 
+
     const tokenHash =
         hashSessionToken(token);
+
 
     const result =
         await pool.query(
@@ -355,60 +427,103 @@ async function getAccountFromSession(req) {
             ]
         );
 
-    if (result.rows.length === 0) {
+
+    if (
+        result.rows.length === 0
+    ) {
+
         return null;
+
     }
 
+
     return result.rows[0];
+
 }
 
+
+/* =========================================================
+CROSS-SITE SESSION COOKIE
+========================================================= */
+
 function setSessionCookie(res, token) {
+
     res.cookie(
         "core_session",
         token,
         {
             httpOnly: true,
+
+            /*
+            Required because the launcher and accounts
+            server are on different Render domains.
+            */
+
             secure: true,
-            sameSite: "lax",
-            maxAge: SESSION_DURATION_MS,
+
+            /*
+            Allows the cookie to be sent in
+            cross-site credentialed requests.
+            */
+
+            sameSite: "none",
+
+            maxAge:
+                SESSION_DURATION_MS,
+
             path: "/"
         }
     );
+
 }
 
+
 function clearSessionCookie(res) {
+
     res.clearCookie(
         "core_session",
         {
             httpOnly: true,
+
             secure: true,
-            sameSite: "lax",
+
+            sameSite: "none",
+
             path: "/"
         }
     );
+
 }
+
 
 /* =========================================================
 API TOKEN HELPERS
 ========================================================= */
 
 function createApiToken() {
+
     return (
         "cga_" +
         crypto
             .randomBytes(48)
             .toString("hex")
     );
+
 }
 
+
 function hashApiToken(token) {
+
     return crypto
         .createHash("sha256")
         .update(token)
         .digest("hex");
+
 }
 
+
 async function createApiTokenForAccount(accountId) {
+
     const token =
         createApiToken();
 
@@ -420,6 +535,7 @@ async function createApiTokenForAccount(accountId) {
             Date.now() +
             API_TOKEN_DURATION_MS
         );
+
 
     await pool.query(
         `
@@ -440,39 +556,52 @@ async function createApiTokenForAccount(accountId) {
         ]
     );
 
+
     return {
         token,
         expiresAt
     };
+
 }
 
+
 async function getAccountFromApiToken(req) {
+
     const authorization =
         req.headers.authorization;
+
 
     if (!authorization) {
         return null;
     }
 
+
     const parts =
         authorization.split(" ");
+
 
     if (
         parts.length !== 2 ||
         parts[0].toLowerCase() !== "bearer"
     ) {
+
         return null;
+
     }
+
 
     const token =
         parts[1];
+
 
     if (!token) {
         return null;
     }
 
+
     const tokenHash =
         hashApiToken(token);
+
 
     const result =
         await pool.query(
@@ -500,12 +629,20 @@ async function getAccountFromApiToken(req) {
             ]
         );
 
-    if (result.rows.length === 0) {
+
+    if (
+        result.rows.length === 0
+    ) {
+
         return null;
+
     }
 
+
     return result.rows[0];
+
 }
+
 
 /* =========================================================
 REGISTER
@@ -514,7 +651,9 @@ REGISTER
 app.post(
     "/api/register",
     async (req, res) => {
+
         try {
+
             const username =
                 String(
                     req.body.username || ""
@@ -525,50 +664,68 @@ app.post(
                     req.body.password || ""
                 );
 
+
             if (!username) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Please enter a username."
                 });
+
             }
+
 
             if (
                 username.length < 3 ||
                 username.length > 20
             ) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Username must be between 3 and 20 characters."
                 });
+
             }
 
+
             if (
-                !/^[a-zA-Z0-9_]+$/.test(username)
+                !/^[a-zA-Z0-9_]+$/.test(
+                    username
+                )
             ) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Username can only contain letters, numbers, and underscores."
                 });
+
             }
 
+
             if (!password) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Please enter a password."
                 });
+
             }
 
+
             if (password.length < 8) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Password must be at least 8 characters."
                 });
+
             }
+
 
             const existingAccount =
                 await pool.query(
@@ -586,21 +743,26 @@ app.post(
                     ]
                 );
 
+
             if (
                 existingAccount.rows.length > 0
             ) {
+
                 return res.status(409).json({
                     success: false,
                     message:
                         "That username is already taken."
                 });
+
             }
+
 
             const passwordHash =
                 await bcrypt.hash(
                     password,
                     12
                 );
+
 
             const result =
                 await pool.query(
@@ -625,23 +787,28 @@ app.post(
                     ]
                 );
 
+
             const account =
                 result.rows[0];
+
 
             const sessionToken =
                 await createSession(
                     account.id
                 );
 
+
             setSessionCookie(
                 res,
                 sessionToken
             );
 
+
             console.log(
                 "New Core Games account created: " +
                 account.username
             );
+
 
             return res.status(201).json({
                 success: true,
@@ -651,20 +818,26 @@ app.post(
                     account.username
             });
 
+
         } catch (error) {
+
             console.error(
                 "Registration error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "An error occurred while creating your account."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 LOGIN
@@ -673,7 +846,9 @@ LOGIN
 app.post(
     "/api/login",
     async (req, res) => {
+
         try {
+
             const username =
                 String(
                     req.body.username || ""
@@ -684,16 +859,20 @@ app.post(
                     req.body.password || ""
                 );
 
+
             if (
                 !username ||
                 !password
             ) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Please enter your username and password."
                 });
+
             }
+
 
             const result =
                 await pool.query(
@@ -714,16 +893,21 @@ app.post(
                     ]
                 );
 
+
             const account =
                 result.rows[0];
 
+
             if (!account) {
+
                 return res.status(401).json({
                     success: false,
                     message:
                         "Invalid username or password."
                 });
+
             }
+
 
             const passwordMatches =
                 await bcrypt.compare(
@@ -731,28 +915,35 @@ app.post(
                     account.password_hash
                 );
 
+
             if (!passwordMatches) {
+
                 return res.status(401).json({
                     success: false,
                     message:
                         "Invalid username or password."
                 });
+
             }
+
 
             const sessionToken =
                 await createSession(
                     account.id
                 );
 
+
             setSessionCookie(
                 res,
                 sessionToken
             );
 
+
             console.log(
                 "Account logged in: " +
                 account.username
             );
+
 
             return res.json({
                 success: true,
@@ -762,20 +953,26 @@ app.post(
                     account.username
             });
 
+
         } catch (error) {
+
             console.error(
                 "Login error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "An error occurred while logging in."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 CHECK CURRENT SESSION
@@ -784,44 +981,122 @@ CHECK CURRENT SESSION
 app.get(
     "/api/me",
     async (req, res) => {
+
         try {
+
             const account =
                 await getAccountFromSession(
                     req
                 );
 
+
             if (!account) {
+
                 return res.status(401).json({
                     success: false,
                     loggedIn: false
                 });
+
             }
+
 
             return res.json({
                 success: true,
+
                 loggedIn: true,
+
                 username:
                     account.username,
+
                 createdAt:
                     account.created_at,
+
                 sessionExpiresAt:
                     account.expires_at
             });
 
+
         } catch (error) {
+
             console.error(
                 "Session check error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to check login status."
             });
+
         }
+
     }
 );
+
+
+/* =========================================================
+SESSION ALIAS
+========================================================= */
+
+app.get(
+    "/api/session",
+    async (req, res) => {
+
+        try {
+
+            const account =
+                await getAccountFromSession(
+                    req
+                );
+
+
+            if (!account) {
+
+                return res.status(401).json({
+                    success: false,
+                    loggedIn: false
+                });
+
+            }
+
+
+            return res.json({
+                success: true,
+
+                loggedIn: true,
+
+                username:
+                    account.username,
+
+                createdAt:
+                    account.created_at,
+
+                sessionExpiresAt:
+                    account.expires_at
+            });
+
+
+        } catch (error) {
+
+            console.error(
+                "Session endpoint error:",
+                error
+            );
+
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    "Unable to check session."
+            });
+
+        }
+
+    }
+);
+
 
 /* =========================================================
 LOGOUT
@@ -830,15 +1105,20 @@ LOGOUT
 app.post(
     "/api/logout",
     async (req, res) => {
+
         try {
+
             const token =
                 req.cookies.core_session;
 
+
             if (token) {
+
                 const tokenHash =
                     hashSessionToken(
                         token
                     );
+
 
                 await pool.query(
                     `
@@ -851,11 +1131,14 @@ app.post(
                         tokenHash
                     ]
                 );
+
             }
+
 
             clearSessionCookie(
                 res
             );
+
 
             return res.json({
                 success: true,
@@ -863,62 +1146,86 @@ app.post(
                     "Logged out successfully."
             });
 
+
         } catch (error) {
+
             console.error(
                 "Logout error:",
                 error
             );
 
+
             clearSessionCookie(
                 res
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "An error occurred while logging out."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 SOCIAL AUTHENTICATION MIDDLEWARE
 ========================================================= */
 
-async function requireLogin(req, res, next) {
+async function requireLogin(
+    req,
+    res,
+    next
+) {
+
     try {
+
         const account =
             await getAccountFromSession(
                 req
             );
 
+
         if (!account) {
+
             return res.status(401).json({
                 success: false,
                 message:
                     "You must be logged in."
             });
+
         }
+
 
         req.account =
             account;
 
+
         next();
 
+
     } catch (error) {
+
         console.error(
             "Authentication error:",
             error
         );
+
 
         return res.status(500).json({
             success: false,
             message:
                 "Unable to authenticate account."
         });
+
     }
+
 }
+
 
 /* =========================================================
 USER SEARCH
@@ -928,18 +1235,24 @@ app.get(
     "/api/users/search",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const query =
                 String(
                     req.query.q || ""
                 ).trim();
 
+
             if (query.length < 2) {
+
                 return res.json({
                     success: true,
                     users: []
                 });
+
             }
+
 
             const result =
                 await pool.query(
@@ -967,26 +1280,33 @@ app.get(
                     ]
                 );
 
+
             return res.json({
                 success: true,
                 users:
                     result.rows
             });
 
+
         } catch (error) {
+
             console.error(
                 "User search error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to search users."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 SEND FRIEND REQUEST
@@ -996,19 +1316,25 @@ app.post(
     "/api/friends/request",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const username =
                 String(
                     req.body.username || ""
                 ).trim();
 
+
             if (!username) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Username is required."
                 });
+
             }
+
 
             const userResult =
                 await pool.query(
@@ -1028,29 +1354,37 @@ app.post(
                     ]
                 );
 
+
             if (
                 userResult.rows.length === 0
             ) {
+
                 return res.status(404).json({
                     success: false,
                     message:
                         "User not found."
                 });
+
             }
+
 
             const target =
                 userResult.rows[0];
+
 
             if (
                 target.id ===
                 req.account.id
             ) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "You cannot add yourself."
                 });
+
             }
+
 
             const friendship =
                 await pool.query(
@@ -1082,15 +1416,19 @@ app.post(
                     ]
                 );
 
+
             if (
                 friendship.rows.length > 0
             ) {
+
                 return res.status(409).json({
                     success: false,
                     message:
                         "You are already friends."
                 });
+
             }
+
 
             const existingRequest =
                 await pool.query(
@@ -1131,15 +1469,19 @@ app.post(
                     ]
                 );
 
+
             if (
                 existingRequest.rows.length > 0
             ) {
+
                 return res.status(409).json({
                     success: false,
                     message:
                         "A friend request already exists."
                 });
+
             }
+
 
             await pool.query(
                 `
@@ -1158,26 +1500,33 @@ app.post(
                 ]
             );
 
+
             return res.json({
                 success: true,
                 message:
                     "Friend request sent."
             });
 
+
         } catch (error) {
+
             console.error(
                 "Friend request error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to send friend request."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 GET FRIEND REQUESTS
@@ -1187,7 +1536,9 @@ app.get(
     "/api/friends/requests",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const result =
                 await pool.query(
                     `
@@ -1217,26 +1568,33 @@ app.get(
                     ]
                 );
 
+
             return res.json({
                 success: true,
                 requests:
                     result.rows
             });
 
+
         } catch (error) {
+
             console.error(
                 "Friend request list error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to load friend requests."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 ACCEPT FRIEND REQUEST
@@ -1246,13 +1604,17 @@ app.post(
     "/api/friends/requests/:id/accept",
     requireLogin,
     async (req, res) => {
+
         const client =
             await pool.connect();
 
+
         try {
+
             await client.query(
                 "BEGIN"
             );
+
 
             const requestResult =
                 await client.query(
@@ -1281,22 +1643,28 @@ app.post(
                     ]
                 );
 
+
             if (
                 requestResult.rows.length === 0
             ) {
+
                 await client.query(
                     "ROLLBACK"
                 );
+
 
                 return res.status(404).json({
                     success: false,
                     message:
                         "Friend request not found."
                 });
+
             }
+
 
             const request =
                 requestResult.rows[0];
+
 
             await client.query(
                 `
@@ -1312,6 +1680,7 @@ app.post(
                     request.id
                 ]
             );
+
 
             await client.query(
                 `
@@ -1333,9 +1702,11 @@ app.post(
                 ]
             );
 
+
             await client.query(
                 "COMMIT"
             );
+
 
             return res.json({
                 success: true,
@@ -1343,15 +1714,19 @@ app.post(
                     "Friend request accepted."
             });
 
+
         } catch (error) {
+
             await client.query(
                 "ROLLBACK"
             );
+
 
             console.error(
                 "Accept friend request error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
@@ -1359,11 +1734,16 @@ app.post(
                     "Unable to accept friend request."
             });
 
+
         } finally {
+
             client.release();
+
         }
+
     }
 );
+
 
 /* =========================================================
 DECLINE FRIEND REQUEST
@@ -1373,7 +1753,9 @@ app.post(
     "/api/friends/requests/:id/decline",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const result =
                 await pool.query(
                     `
@@ -1393,15 +1775,19 @@ app.post(
                     ]
                 );
 
+
             if (
                 result.rowCount === 0
             ) {
+
                 return res.status(404).json({
                     success: false,
                     message:
                         "Friend request not found."
                 });
+
             }
+
 
             return res.json({
                 success: true,
@@ -1409,20 +1795,26 @@ app.post(
                     "Friend request declined."
             });
 
+
         } catch (error) {
+
             console.error(
                 "Decline friend request error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to decline friend request."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 GET FRIENDS
@@ -1432,7 +1824,9 @@ app.get(
     "/api/friends",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const result =
                 await pool.query(
                     `
@@ -1457,26 +1851,33 @@ app.get(
                     ]
                 );
 
+
             return res.json({
                 success: true,
                 friends:
                     result.rows
             });
 
+
         } catch (error) {
+
             console.error(
                 "Friends list error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to load friends."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 REMOVE FRIEND
@@ -1486,7 +1887,9 @@ app.delete(
     "/api/friends/:friendId",
     requireLogin,
     async (req, res) => {
+
         try {
+
             await pool.query(
                 `
                 DELETE FROM friendships
@@ -1512,26 +1915,33 @@ app.delete(
                 ]
             );
 
+
             return res.json({
                 success: true,
                 message:
                     "Friend removed."
             });
 
+
         } catch (error) {
+
             console.error(
                 "Remove friend error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to remove friend."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 GET MESSAGE HISTORY
@@ -1541,23 +1951,29 @@ app.get(
     "/api/messages/:friendId",
     requireLogin,
     async (req, res) => {
+
         try {
+
             const friendId =
                 Number(
                     req.params.friendId
                 );
+
 
             if (
                 !Number.isInteger(
                     friendId
                 )
             ) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Invalid friend ID."
                 });
+
             }
+
 
             const friendship =
                 await pool.query(
@@ -1578,15 +1994,19 @@ app.get(
                     ]
                 );
 
+
             if (
                 friendship.rows.length === 0
             ) {
+
                 return res.status(403).json({
                     success: false,
                     message:
                         "You can only message your friends."
                 });
+
             }
+
 
             const result =
                 await pool.query(
@@ -1644,26 +2064,33 @@ app.get(
                     ]
                 );
 
+
             return res.json({
                 success: true,
                 messages:
                     result.rows
             });
 
+
         } catch (error) {
+
             console.error(
                 "Message history error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to load messages."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 CREATE API TOKEN
@@ -1672,53 +2099,73 @@ CREATE API TOKEN
 app.post(
     "/api/v1/tokens",
     async (req, res) => {
+
         try {
+
             const account =
                 await getAccountFromSession(
                     req
                 );
 
+
             if (!account) {
+
                 return res.status(401).json({
                     success: false,
                     message:
                         "You must be logged in to create an API token."
                 });
+
             }
+
 
             const apiToken =
                 await createApiTokenForAccount(
                     account.id
                 );
 
+
             return res.status(201).json({
+
                 success: true,
+
                 token:
                     apiToken.token,
+
                 tokenType:
                     "Bearer",
+
                 expiresAt:
                     apiToken.expiresAt,
+
                 username:
                     account.username,
+
                 message:
                     "API token created. Store this token securely."
+
             });
 
+
         } catch (error) {
+
             console.error(
                 "API token creation error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to create API token."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 VERIFY API TOKEN
@@ -1727,26 +2174,41 @@ VERIFY API TOKEN
 app.get(
     "/api/v1/me",
     async (req, res) => {
+
         try {
+
             const account =
                 await getAccountFromApiToken(
                     req
                 );
 
+
             if (!account) {
+
                 return res.status(401).json({
+
                     success: false,
-                    authenticated: false,
+
+                    authenticated:
+                        false,
+
                     message:
                         "Invalid or expired API token."
+
                 });
+
             }
 
+
             return res.json({
+
                 success: true,
-                authenticated: true,
+
+                authenticated:
+                    true,
 
                 user: {
+
                     id:
                         account.id,
 
@@ -1755,27 +2217,40 @@ app.get(
 
                     createdAt:
                         account.created_at
+
                 },
 
                 tokenExpiresAt:
                     account.expires_at
+
             });
 
+
         } catch (error) {
+
             console.error(
                 "API authentication error:",
                 error
             );
 
+
             return res.status(500).json({
+
                 success: false,
-                authenticated: false,
+
+                authenticated:
+                    false,
+
                 message:
                     "Unable to authenticate API token."
+
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 REVOKE API TOKEN
@@ -1784,39 +2259,51 @@ REVOKE API TOKEN
 app.delete(
     "/api/v1/tokens",
     async (req, res) => {
+
         try {
+
             const authorization =
                 req.headers.authorization;
 
+
             if (!authorization) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Authorization header is required."
                 });
+
             }
+
 
             const parts =
                 authorization.split(" ");
+
 
             if (
                 parts.length !== 2 ||
                 parts[0].toLowerCase() !== "bearer"
             ) {
+
                 return res.status(400).json({
                     success: false,
                     message:
                         "Invalid Authorization header."
                 });
+
             }
+
 
             const token =
                 parts[1];
+
 
             const tokenHash =
                 hashApiToken(
                     token
                 );
+
 
             const result =
                 await pool.query(
@@ -1833,15 +2320,19 @@ app.delete(
                     ]
                 );
 
+
             if (
                 result.rowCount === 0
             ) {
+
                 return res.status(404).json({
                     success: false,
                     message:
                         "API token not found."
                 });
+
             }
+
 
             return res.json({
                 success: true,
@@ -1849,20 +2340,26 @@ app.delete(
                     "API token revoked successfully."
             });
 
+
         } catch (error) {
+
             console.error(
                 "API token revocation error:",
                 error
             );
+
 
             return res.status(500).json({
                 success: false,
                 message:
                     "Unable to revoke API token."
             });
+
         }
+
     }
 );
+
 
 /* =========================================================
 SOCKET.IO AUTHENTICATION
@@ -1870,59 +2367,79 @@ SOCKET.IO AUTHENTICATION
 
 io.use(
     async (socket, next) => {
+
         try {
+
             const cookieHeader =
                 socket.handshake.headers.cookie;
 
+
             if (!cookieHeader) {
+
                 return next(
                     new Error(
                         "Not authenticated"
                     )
                 );
+
             }
 
+
             const cookies = {};
+
 
             cookieHeader
                 .split(";")
                 .forEach(
                     cookie => {
+
                         const parts =
                             cookie
                                 .trim()
                                 .split("=");
 
+
                         const key =
                             parts.shift();
+
 
                         const value =
                             parts.join("=");
 
+
                         if (key) {
+
                             cookies[key] =
                                 decodeURIComponent(
                                     value
                                 );
+
                         }
+
                     }
                 );
+
 
             const token =
                 cookies.core_session;
 
+
             if (!token) {
+
                 return next(
                     new Error(
                         "Not authenticated"
                     )
                 );
+
             }
+
 
             const tokenHash =
                 hashSessionToken(
                     token
                 );
+
 
             const result =
                 await pool.query(
@@ -1948,35 +2465,46 @@ io.use(
                     ]
                 );
 
+
             if (
                 result.rows.length === 0
             ) {
+
                 return next(
                     new Error(
                         "Session expired"
                     )
                 );
+
             }
+
 
             socket.account =
                 result.rows[0];
 
+
             next();
 
+
         } catch (error) {
+
             console.error(
                 "Socket authentication error:",
                 error
             );
+
 
             next(
                 new Error(
                     "Authentication failed"
                 )
             );
+
         }
+
     }
 );
+
 
 /* =========================================================
 ONLINE USERS
@@ -1985,63 +2513,83 @@ ONLINE USERS
 const onlineUsers =
     new Map();
 
+
 function setUserOnline(
     accountId,
     socketId
 ) {
+
     if (
         !onlineUsers.has(
             accountId
         )
     ) {
+
         onlineUsers.set(
             accountId,
             new Set()
         );
+
     }
+
 
     onlineUsers
         .get(accountId)
         .add(socketId);
+
 }
+
 
 function setUserOffline(
     accountId,
     socketId
 ) {
+
     if (
         !onlineUsers.has(
             accountId
         )
     ) {
+
         return;
+
     }
+
 
     const sockets =
         onlineUsers.get(
             accountId
         );
 
+
     sockets.delete(
         socketId
     );
 
+
     if (
         sockets.size === 0
     ) {
+
         onlineUsers.delete(
             accountId
         );
+
     }
+
 }
+
 
 function isUserOnline(
     accountId
 ) {
+
     return onlineUsers.has(
         accountId
     );
+
 }
+
 
 /* =========================================================
 SOCKET.IO CONNECTION
@@ -2050,18 +2598,22 @@ SOCKET.IO CONNECTION
 io.on(
     "connection",
     socket => {
+
         const account =
             socket.account;
+
 
         setUserOnline(
             account.id,
             socket.id
         );
 
+
         console.log(
             "User connected: " +
             account.username
         );
+
 
         socket.emit(
             "presence",
@@ -2069,21 +2621,26 @@ io.on(
                 userId:
                     account.id,
 
-                online: true
+                online:
+                    true
             }
         );
+
 
         socket.on(
             "getPresence",
             userId => {
+
                 const numericUserId =
                     Number(
                         userId
                     );
 
+
                 socket.emit(
                     "presence",
                     {
+
                         userId:
                             numericUserId,
 
@@ -2091,30 +2648,38 @@ io.on(
                             isUserOnline(
                                 numericUserId
                             )
+
                     }
                 );
+
             }
         );
+
 
         socket.on(
             "sendMessage",
             async data => {
+
                 try {
+
                     const receiverId =
                         Number(
                             data.receiverId
                         );
+
 
                     const message =
                         String(
                             data.message || ""
                         ).trim();
 
+
                     if (
                         !Number.isInteger(
                             receiverId
                         )
                     ) {
+
                         return socket.emit(
                             "messageError",
                             {
@@ -2122,12 +2687,15 @@ io.on(
                                     "Invalid receiver."
                             }
                         );
+
                     }
+
 
                     if (
                         receiverId ===
                         account.id
                     ) {
+
                         return socket.emit(
                             "messageError",
                             {
@@ -2135,12 +2703,15 @@ io.on(
                                     "You cannot message yourself."
                             }
                         );
+
                     }
+
 
                     if (
                         !message ||
                         message.length > 2000
                     ) {
+
                         return socket.emit(
                             "messageError",
                             {
@@ -2148,7 +2719,9 @@ io.on(
                                     "Message must be between 1 and 2000 characters."
                             }
                         );
+
                     }
+
 
                     const friendship =
                         await pool.query(
@@ -2169,9 +2742,11 @@ io.on(
                             ]
                         );
 
+
                     if (
                         friendship.rows.length === 0
                     ) {
+
                         return socket.emit(
                             "messageError",
                             {
@@ -2179,7 +2754,9 @@ io.on(
                                     "You can only message your friends."
                             }
                         );
+
                     }
+
 
                     const result =
                         await pool.query(
@@ -2209,10 +2786,13 @@ io.on(
                             ]
                         );
 
+
                     const savedMessage =
                         result.rows[0];
 
+
                     const messageData = {
+
                         id:
                             savedMessage.id,
 
@@ -2227,12 +2807,15 @@ io.on(
 
                         createdAt:
                             savedMessage.created_at
+
                     };
+
 
                     socket.emit(
                         "newMessage",
                         messageData
                     );
+
 
                     for (
                         const [
@@ -2241,23 +2824,30 @@ io.on(
                         ]
                         of io.sockets.sockets
                     ) {
+
                         if (
                             socketSet.account &&
                             socketSet.account.id ===
                                 receiverId
                         ) {
+
                             socketSet.emit(
                                 "newMessage",
                                 messageData
                             );
+
                         }
+
                     }
 
+
                 } catch (error) {
+
                     console.error(
                         "Socket message error:",
                         error
                     );
+
 
                     socket.emit(
                         "messageError",
@@ -2266,33 +2856,43 @@ io.on(
                                 "Unable to send message."
                         }
                     );
+
                 }
+
             }
         );
+
 
         socket.on(
             "disconnect",
             () => {
+
                 setUserOffline(
                     account.id,
                     socket.id
                 );
 
+
                 console.log(
                     "User disconnected: " +
                     account.username
                 );
+
             }
         );
+
     }
 );
+
 
 /* =========================================================
 CLEAN EXPIRED SESSIONS AND API TOKENS
 ========================================================= */
 
 async function cleanExpiredSessions() {
+
     try {
+
         const sessionResult =
             await pool.query(
                 `
@@ -2303,15 +2903,19 @@ async function cleanExpiredSessions() {
                 `
             );
 
+
         if (
             sessionResult.rowCount > 0
         ) {
+
             console.log(
                 "Cleaned " +
                 sessionResult.rowCount +
                 " expired session(s)."
             );
+
         }
+
 
         const apiTokenResult =
             await pool.query(
@@ -2323,28 +2927,62 @@ async function cleanExpiredSessions() {
                 `
             );
 
+
         if (
             apiTokenResult.rowCount > 0
         ) {
+
             console.log(
                 "Cleaned " +
                 apiTokenResult.rowCount +
                 " expired API token(s)."
             );
+
         }
 
+
     } catch (error) {
+
         console.error(
             "Session and API token cleanup error:",
             error
         );
+
     }
+
 }
+
 
 setInterval(
     cleanExpiredSessions,
     60 * 60 * 1000
 );
+
+
+/* =========================================================
+HEALTH CHECK
+========================================================= */
+
+app.get(
+    "/api/health",
+    (req, res) => {
+
+        res.json({
+
+            online:
+                true,
+
+            service:
+                "Core Games Accounts",
+
+            status:
+                "healthy"
+
+        });
+
+    }
+);
+
 
 /* =========================================================
 STATUS API
@@ -2353,7 +2991,9 @@ STATUS API
 app.get(
     "/api/status",
     (req, res) => {
+
         res.json({
+
             online:
                 true,
 
@@ -2376,10 +3016,16 @@ app.get(
                 true,
 
             socketIO:
-                true
+                true,
+
+            launcher:
+                "https://core-launcher-hb1m.onrender.com"
+
         });
+
     }
 );
+
 
 /* =========================================================
 FALLBACK
@@ -2387,6 +3033,7 @@ FALLBACK
 
 app.use(
     (req, res) => {
+
         res.sendFile(
             path.join(
                 __dirname,
@@ -2394,48 +3041,68 @@ app.use(
                 "index.html"
             )
         );
+
     }
 );
+
 
 /* =========================================================
 START SERVER
 ========================================================= */
 
 async function startServer() {
+
     await initializeDatabase();
 
     await cleanExpiredSessions();
+
 
     server.listen(
         PORT,
         "0.0.0.0",
         () => {
+
             console.log(
                 "Core Games Accounts server running on port " +
                 PORT
             );
 
+
             console.log(
                 "Social features enabled."
             );
+
 
             console.log(
                 "Socket.IO enabled."
             );
 
+
+            console.log(
+                "Cross-site launcher authentication enabled."
+            );
+
+
             console.log(
                 "Allowed frontend origins:"
             );
 
+
             allowedOrigins.forEach(
                 origin => {
+
                     console.log(
-                        " - " + origin
+                        " - " +
+                        origin
                     );
+
                 }
             );
+
         }
     );
+
 }
+
 
 startServer();
