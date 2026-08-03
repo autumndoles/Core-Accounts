@@ -1,3 +1,4 @@
+
 const express = require("express");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
@@ -32,6 +33,15 @@ They are also single-use.
 
 const HANDOFF_TOKEN_DURATION_MS =
     2 * 60 * 1000;
+
+/*
+Bad Apples+ account linking codes
+are intentionally short-lived
+and single-use.
+*/
+
+const LINK_CODE_DURATION_MS =
+    10 * 60 * 1000;
 
 const LAUNCHER_URL =
     "https://core-launcher-hb1m.onrender.com";
@@ -333,6 +343,47 @@ async function initializeDatabase() {
         `);
 
 
+        /*
+        BAD APPLES+ ACCOUNT LINKING CODES
+
+        A logged-in Core account can generate
+        a temporary code.
+
+        Bad Apples+ exchanges the code for
+        the verified Core account identity.
+
+        Codes are single-use.
+        */
+
+        await pool.query(`
+
+            CREATE TABLE IF NOT EXISTS account_link_codes (
+
+                id SERIAL PRIMARY KEY,
+
+                code_hash TEXT
+                    UNIQUE NOT NULL,
+
+                account_id INTEGER
+                    NOT NULL
+
+                    REFERENCES accounts(id)
+                    ON DELETE CASCADE,
+
+                expires_at TIMESTAMP
+                    NOT NULL,
+
+                used BOOLEAN
+                    DEFAULT FALSE,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
+
+            )
+
+        `);
+
+
         await pool.query(`
 
             CREATE TABLE IF NOT EXISTS friend_requests (
@@ -485,6 +536,26 @@ async function initializeDatabase() {
             handoff_tokens_expires_at_index
 
             ON handoff_tokens(expires_at)
+
+        `);
+
+
+        await pool.query(`
+
+            CREATE INDEX IF NOT EXISTS
+            account_link_codes_hash_index
+
+            ON account_link_codes(code_hash)
+
+        `);
+
+
+        await pool.query(`
+
+            CREATE INDEX IF NOT EXISTS
+            account_link_codes_expires_at_index
+
+            ON account_link_codes(expires_at)
 
         `);
 
@@ -882,6 +953,165 @@ async function createHandoffTokenForAccount(
 
 
     return token;
+
+}
+
+
+/* =========================================================
+BAD APPLES+ LINKING CODE HELPERS
+========================================================= */
+
+function createAccountLinkCode() {
+
+    /*
+    Generates a human-friendly
+    8-character hexadecimal code.
+
+    Example:
+
+    4A7F91BC
+
+    The raw code is returned only
+    to the logged-in user.
+
+    Only the hash is stored.
+    */
+
+    return crypto
+
+        .randomBytes(4)
+
+        .toString("hex")
+
+        .toUpperCase();
+
+}
+
+
+function hashAccountLinkCode(
+    code
+) {
+
+    return crypto
+
+        .createHash("sha256")
+
+        .update(
+
+            String(code)
+
+                .trim()
+
+                .toUpperCase()
+
+        )
+
+        .digest("hex");
+
+}
+
+
+async function createAccountLinkCodeForAccount(
+    accountId
+) {
+
+    const code =
+        createAccountLinkCode();
+
+
+    const codeHash =
+        hashAccountLinkCode(
+            code
+        );
+
+
+    const expiresAt =
+        new Date(
+
+            Date.now() +
+
+            LINK_CODE_DURATION_MS
+
+        );
+
+
+    /*
+    Remove any older unused codes
+    belonging to this account.
+
+    This prevents a user from having
+    a huge number of active codes.
+    */
+
+    await pool.query(
+
+        `
+
+        DELETE FROM account_link_codes
+
+        WHERE
+
+            account_id = $1
+
+        AND
+
+            used = FALSE
+
+        `,
+
+        [
+
+            accountId
+
+        ]
+
+    );
+
+
+    await pool.query(
+
+        `
+
+        INSERT INTO account_link_codes
+
+        (
+
+            code_hash,
+
+            account_id,
+
+            expires_at,
+
+            used
+
+        )
+
+        VALUES
+
+        ($1, $2, $3, FALSE)
+
+        `,
+
+        [
+
+            codeHash,
+
+            accountId,
+
+            expiresAt
+
+        ]
+
+    );
+
+
+    return {
+
+        code,
+
+        expiresAt
+
+    };
 
 }
 
@@ -2321,6 +2551,678 @@ async function requireLogin(
 
 
 /* =========================================================
+BAD APPLES+ ACCOUNT LINKING
+========================================================= */
+
+/*
+STEP 1:
+
+A logged-in Core Games user requests
+a one-time linking code.
+
+The Core session cookie authenticates
+the request.
+
+The returned code should be displayed
+to the user.
+
+Example response:
+
+{
+    success: true,
+    code: "4A7F91BC",
+    expiresAt: "..."
+}
+
+The code expires after 10 minutes
+and can only be used once.
+*/
+
+app.post(
+
+    "/api/bad-apples/link-code",
+
+    requireLogin,
+
+    async (
+
+        req,
+
+        res
+
+    ) => {
+
+        try {
+
+            const linkCode =
+
+                await createAccountLinkCodeForAccount(
+
+                    req.account.id
+
+                );
+
+
+            console.log(
+
+                "Bad Apples+ account linking code created for: " +
+
+                req.account.username
+
+            );
+
+
+            return res.status(201).json({
+
+                success:
+                    true,
+
+                game:
+                    "Bad Apples+",
+
+                code:
+                    linkCode.code,
+
+                expiresAt:
+                    linkCode.expiresAt,
+
+                username:
+                    req.account.username,
+
+                message:
+                    "Enter this code in Bad Apples+ to link your Core Games account."
+
+            });
+
+
+        } catch (error) {
+
+            console.error(
+
+                "Bad Apples+ link code creation error:",
+
+                error
+
+            );
+
+
+            return res.status(500).json({
+
+                success:
+                    false,
+
+                message:
+                    "Unable to create Bad Apples+ linking code."
+
+            });
+
+        }
+
+    }
+
+);
+
+
+/*
+STEP 2:
+
+Bad Apples+ submits the one-time code.
+
+Bad Apples+ may also provide its own
+account identifier.
+
+Example request:
+
+{
+    "code": "4A7F91BC",
+    "badApplesAccountId": "player-12345"
+}
+
+The Core Games server verifies the code.
+
+The code is atomically marked as used.
+
+The verified Core account information
+is returned to Bad Apples+.
+
+Bad Apples+ should then store:
+
+badApplesAccountId
+    ->
+Core account ID
+
+The Core account ID should be treated
+as the permanent Core identity.
+*/
+
+app.post(
+
+    "/api/bad-apples/link",
+
+    async (
+
+        req,
+
+        res
+
+    ) => {
+
+        const client =
+            await pool.connect();
+
+
+        try {
+
+            const code =
+
+                String(
+
+                    req.body.code || ""
+
+                )
+
+                    .trim()
+
+                    .toUpperCase();
+
+
+            const badApplesAccountId =
+
+                String(
+
+                    req.body.badApplesAccountId || ""
+
+                )
+
+                    .trim();
+
+
+            if (!code) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    linked:
+                        false,
+
+                    message:
+                        "Linking code is required."
+
+                });
+
+            }
+
+
+            if (
+
+                code.length !== 8 ||
+
+                !/^[A-F0-9]{8}$/.test(
+
+                    code
+
+                )
+
+            ) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    linked:
+                        false,
+
+                    message:
+                        "Invalid linking code format."
+
+                });
+
+            }
+
+
+            /*
+            The Bad Apples account ID is optional
+            from Core's perspective.
+
+            Bad Apples+ should normally provide it
+            so it knows which local game account
+            to associate with the Core account.
+            */
+
+            const codeHash =
+
+                hashAccountLinkCode(
+
+                    code
+
+                );
+
+
+            await client.query(
+
+                "BEGIN"
+
+            );
+
+
+            /*
+            Lock the code row while checking it.
+
+            This prevents two simultaneous
+            redemption attempts from both
+            successfully using the same code.
+            */
+
+            const result =
+
+                await client.query(
+
+                    `
+
+                    SELECT
+
+                        account_link_codes.id
+
+                            AS link_code_id,
+
+                        account_link_codes.account_id,
+
+                        accounts.username,
+
+                        accounts.created_at
+
+                    FROM account_link_codes
+
+                    INNER JOIN accounts
+
+                        ON accounts.id =
+
+                           account_link_codes.account_id
+
+                    WHERE
+
+                        account_link_codes.code_hash = $1
+
+                    AND
+
+                        account_link_codes.expires_at > NOW()
+
+                    AND
+
+                        account_link_codes.used = FALSE
+
+                    LIMIT 1
+
+                    FOR UPDATE
+
+                    `,
+
+                    [
+
+                        codeHash
+
+                    ]
+
+                );
+
+
+            if (
+
+                result.rows.length === 0
+
+            ) {
+
+                await client.query(
+
+                    "ROLLBACK"
+
+                );
+
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    linked:
+                        false,
+
+                    message:
+                        "Invalid, expired, or already used linking code."
+
+                });
+
+            }
+
+
+            const account =
+                result.rows[0];
+
+
+            /*
+            Mark the code as used BEFORE
+            returning the verified identity.
+
+            The transaction guarantees that
+            another request cannot redeem it
+            simultaneously.
+            */
+
+            const updateResult =
+
+                await client.query(
+
+                    `
+
+                    UPDATE account_link_codes
+
+                    SET
+
+                        used = TRUE
+
+                    WHERE
+
+                        id = $1
+
+                    AND
+
+                        used = FALSE
+
+                    RETURNING id
+
+                    `,
+
+                    [
+
+                        account.link_code_id
+
+                    ]
+
+                );
+
+
+            if (
+
+                updateResult.rowCount === 0
+
+            ) {
+
+                await client.query(
+
+                    "ROLLBACK"
+
+                );
+
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    linked:
+                        false,
+
+                    message:
+                        "This linking code has already been used."
+
+                });
+
+            }
+
+
+            await client.query(
+
+                "COMMIT"
+
+            );
+
+
+            console.log(
+
+                "Bad Apples+ account linked to Core account: " +
+
+                account.username +
+
+                (
+
+                    badApplesAccountId
+
+                        ? " | Bad Apples account: " +
+
+                          badApplesAccountId
+
+                        : ""
+
+                )
+
+            );
+
+
+            return res.json({
+
+                success:
+                    true,
+
+                linked:
+                    true,
+
+                game:
+                    "Bad Apples+",
+
+                coreAccount: {
+
+                    id:
+                        account.account_id,
+
+                    username:
+                        account.username,
+
+                    createdAt:
+                        account.created_at
+
+                },
+
+                badApplesAccountId:
+
+                    badApplesAccountId ||
+
+                    null,
+
+                message:
+                    "Bad Apples+ account successfully linked to Core Games."
+
+            });
+
+
+        } catch (error) {
+
+            try {
+
+                await client.query(
+
+                    "ROLLBACK"
+
+                );
+
+            } catch (
+
+                rollbackError
+
+            ) {
+
+                console.error(
+
+                    "Link rollback error:",
+
+                    rollbackError
+
+                );
+
+            }
+
+
+            console.error(
+
+                "Bad Apples+ account linking error:",
+
+                error
+
+            );
+
+
+            return res.status(500).json({
+
+                success:
+                    false,
+
+                linked:
+                    false,
+
+                message:
+                    "Unable to link Bad Apples+ account."
+
+            });
+
+
+        } finally {
+
+            client.release();
+
+        }
+
+    }
+
+);
+
+
+/* =========================================================
+BAD APPLES+ ACCOUNT VERIFICATION
+========================================================= */
+
+/*
+Bad Apples+ can use this endpoint when
+it already has a Core API token.
+
+Authorization:
+
+Bearer cga_...
+
+This is separate from the one-time
+linking-code system.
+*/
+
+app.get(
+
+    "/api/bad-apples/account",
+
+    async (
+
+        req,
+
+        res
+
+    ) => {
+
+        try {
+
+            const account =
+
+                await getAccountFromApiToken(
+
+                    req
+
+                );
+
+
+            if (!account) {
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    authenticated:
+                        false,
+
+                    game:
+                        "Bad Apples+",
+
+                    message:
+                        "Invalid or expired Core Games API token."
+
+                });
+
+            }
+
+
+            return res.json({
+
+                success:
+                    true,
+
+                authenticated:
+                    true,
+
+                game:
+                    "Bad Apples+",
+
+                user: {
+
+                    id:
+                        account.id,
+
+                    username:
+                        account.username,
+
+                    createdAt:
+                        account.created_at
+
+                },
+
+                tokenExpiresAt:
+                    account.expires_at
+
+            });
+
+
+        } catch (error) {
+
+            console.error(
+
+                "Bad Apples+ account verification error:",
+
+                error
+
+            );
+
+
+            return res.status(500).json({
+
+                success:
+                    false,
+
+                authenticated:
+                    false,
+
+                game:
+                    "Bad Apples+",
+
+                message:
+                    "Unable to verify Core Games account."
+
+            });
+
+        }
+
+    }
+
+);
+
+
+/* =========================================================
 USER SEARCH
 ========================================================= */
 
@@ -2439,7 +3341,7 @@ app.get(
                 message:
                     "Unable to search users."
 
-            });
+                });
 
         }
 
@@ -3622,7 +4524,6 @@ app.get(
 
             });
 
-
         } catch (error) {
 
             console.error(
@@ -3846,133 +4747,6 @@ app.get(
 
                 message:
                     "Unable to authenticate API token."
-
-            });
-
-        }
-
-    }
-
-);
-
-
-/* =========================================================
-BAD APPLES+ ACCOUNT LINKING
-========================================================= */
-
-/*
-Bad Apples+ uses this endpoint to verify
-a Core Games API token.
-
-The Bad Apples+ server sends:
-
-Authorization: Bearer cga_...
-
-The Core Games Accounts server verifies
-the token and returns the verified account.
-
-Bad Apples+ should use the returned
-account ID as the permanent identity.
-*/
-
-app.get(
-
-    "/api/bad-apples/account",
-
-    async (
-
-        req,
-
-        res
-
-    ) => {
-
-        try {
-
-            const account =
-
-                await getAccountFromApiToken(
-
-                    req
-
-                );
-
-
-            if (!account) {
-
-                return res.status(401).json({
-
-                    success:
-                        false,
-
-                    authenticated:
-                        false,
-
-                    game:
-                        "Bad Apples+",
-
-                    message:
-                        "Invalid or expired Core Games API token."
-
-                });
-
-            }
-
-
-            return res.json({
-
-                success:
-                    true,
-
-                authenticated:
-                    true,
-
-                game:
-                    "Bad Apples+",
-
-                user: {
-
-                    id:
-                        account.id,
-
-                    username:
-                        account.username,
-
-                    createdAt:
-                        account.created_at
-
-                },
-
-                tokenExpiresAt:
-                    account.expires_at
-
-            });
-
-
-        } catch (error) {
-
-            console.error(
-
-                "Bad Apples+ account verification error:",
-
-                error
-
-            );
-
-
-            return res.status(500).json({
-
-                success:
-                    false,
-
-                authenticated:
-                    false,
-
-                game:
-                    "Bad Apples+",
-
-                message:
-                    "Unable to verify Core Games account."
 
             });
 
@@ -4905,7 +5679,8 @@ io.on(
 
 /* =========================================================
 CLEAN EXPIRED SESSIONS,
-API TOKENS, AND HANDOFF TOKENS
+API TOKENS, HANDOFF TOKENS,
+AND LINKING CODES
 ========================================================= */
 
 async function cleanExpiredSessions() {
@@ -5024,11 +5799,51 @@ async function cleanExpiredSessions() {
         }
 
 
+        const linkCodeResult =
+
+            await pool.query(
+
+                `
+
+                DELETE FROM account_link_codes
+
+                WHERE
+
+                    expires_at <= NOW()
+
+                OR
+
+                    used = TRUE
+
+                `
+
+            );
+
+
+        if (
+
+            linkCodeResult.rowCount > 0
+
+        ) {
+
+            console.log(
+
+                "Cleaned " +
+
+                linkCodeResult.rowCount +
+
+                " expired or used account linking code(s)."
+
+            );
+
+        }
+
+
     } catch (error) {
 
         console.error(
 
-            "Session, API token, and handoff cleanup error:",
+            "Session, API token, handoff token, and link code cleanup error:",
 
             error
 
@@ -5107,7 +5922,7 @@ app.get(
                 "Core Games Accounts",
 
             version:
-                "5.1.0",
+                "5.2.0",
 
             database:
                 "PostgreSQL",
@@ -5126,6 +5941,12 @@ app.get(
 
             badApples:
                 true,
+
+            badApplesAccountLinking:
+                true,
+
+            accountLinkCodeDuration:
+                "10 minutes",
 
             launcher:
                 LAUNCHER_URL
@@ -5229,6 +6050,41 @@ async function startServer() {
             console.log(
 
                 "Bad Apples+ account linking enabled."
+
+            );
+
+
+            console.log(
+
+                "Bad Apples+ link code duration: 10 minutes."
+
+            );
+
+
+            console.log(
+
+                "Bad Apples+ link code endpoint:"
+
+            );
+
+
+            console.log(
+
+                "POST /api/bad-apples/link-code"
+
+            );
+
+
+            console.log(
+
+                "Bad Apples+ link exchange endpoint:"
+
+            );
+
+
+            console.log(
+
+                "POST /api/bad-apples/link"
 
             );
 
