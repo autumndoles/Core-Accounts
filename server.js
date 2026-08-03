@@ -1,4 +1,3 @@
-
 const express = require("express");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
@@ -42,7 +41,10 @@ const LAUNCHER_URL =
 RENDER / PROXY CONFIGURATION
 ========================================================= */
 
-app.set("trust proxy", 1);
+app.set(
+    "trust proxy",
+    1
+);
 
 
 /* =========================================================
@@ -50,9 +52,13 @@ ALLOWED FRONTEND ORIGINS
 ========================================================= */
 
 const allowedOrigins = [
+
     "https://core-launcher-hb1m.onrender.com",
+
     "https://core-accounts.onrender.com",
+
     "http://localhost:3000"
+
 ];
 
 
@@ -60,19 +66,31 @@ const allowedOrigins = [
 SOCKET.IO
 ========================================================= */
 
-const io = new Server(server, {
-    cors: {
-        origin: allowedOrigins,
-        credentials: true
+const io = new Server(
+    server,
+    {
+
+        cors: {
+
+            origin:
+                allowedOrigins,
+
+            credentials:
+                true
+
+        }
+
     }
-});
+);
 
 
 /* =========================================================
 POSTGRESQL DATABASE
 ========================================================= */
 
-if (!process.env.DATABASE_URL) {
+if (
+    !process.env.DATABASE_URL
+) {
 
     console.error(
         "ERROR: DATABASE_URL environment variable is not set."
@@ -89,7 +107,10 @@ const pool = new Pool({
         process.env.DATABASE_URL,
 
     ssl: {
-        rejectUnauthorized: false
+
+        rejectUnauthorized:
+            false
+
     }
 
 });
@@ -100,9 +121,11 @@ MIDDLEWARE
 ========================================================= */
 
 app.use(
+
     cors({
 
         origin:
+
             function (
                 origin,
                 callback
@@ -133,9 +156,11 @@ app.use(
 
 
                 return callback(
+
                     new Error(
                         "CORS origin not allowed."
                     )
+
                 );
 
             },
@@ -144,6 +169,7 @@ app.use(
             true
 
     })
+
 );
 
 
@@ -153,9 +179,14 @@ app.use(
 
 
 app.use(
+
     express.urlencoded({
-        extended: true
+
+        extended:
+            true
+
     })
+
 );
 
 
@@ -169,12 +200,19 @@ SERVE ACCOUNTS WEBSITE
 ========================================================= */
 
 app.use(
+
     express.static(
+
         path.join(
+
             __dirname,
+
             "public"
+
         )
+
     )
+
 );
 
 
@@ -187,206 +225,305 @@ async function initializeDatabase() {
     try {
 
         await pool.query(`
+
             CREATE TABLE IF NOT EXISTS accounts (
+
                 id SERIAL PRIMARY KEY,
-                username VARCHAR(20) UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+                username VARCHAR(20)
+                    UNIQUE NOT NULL,
+
+                password_hash TEXT
+                    NOT NULL,
+
+                created_at TIMESTAMP
+                    DEFAULT CURRENT_TIMESTAMP
+
             )
+
         `);
 
 
         await pool.query(`
+
             CREATE TABLE IF NOT EXISTS sessions (
+
                 id SERIAL PRIMARY KEY,
 
-                token_hash TEXT UNIQUE NOT NULL,
+                token_hash TEXT
+                    UNIQUE NOT NULL,
 
-                account_id INTEGER NOT NULL
+                account_id INTEGER
+                    NOT NULL
+
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
 
-                expires_at TIMESTAMP NOT NULL,
+                expires_at TIMESTAMP
+                    NOT NULL,
 
                 created_at TIMESTAMP
                     DEFAULT CURRENT_TIMESTAMP
+
             )
+
         `);
 
 
         await pool.query(`
+
             CREATE TABLE IF NOT EXISTS api_tokens (
+
                 id SERIAL PRIMARY KEY,
 
-                token_hash TEXT UNIQUE NOT NULL,
+                token_hash TEXT
+                    UNIQUE NOT NULL,
 
-                account_id INTEGER NOT NULL
+                account_id INTEGER
+                    NOT NULL
+
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
 
-                expires_at TIMESTAMP NOT NULL,
+                expires_at TIMESTAMP
+                    NOT NULL,
 
                 created_at TIMESTAMP
                     DEFAULT CURRENT_TIMESTAMP
+
             )
+
         `);
 
 
         /*
         LOGIN HANDOFF TOKENS
 
-        These are temporary tokens used when the
-        user logs in through the Core Games Accounts
-        website and then returns to the Core Launcher.
+        Used when logging in through the
+        Core Games Accounts website and
+        returning to the Core Launcher.
         */
 
         await pool.query(`
+
             CREATE TABLE IF NOT EXISTS handoff_tokens (
+
                 id SERIAL PRIMARY KEY,
 
-                token_hash TEXT UNIQUE NOT NULL,
+                token_hash TEXT
+                    UNIQUE NOT NULL,
 
-                account_id INTEGER NOT NULL
+                account_id INTEGER
+                    NOT NULL
+
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
 
-                expires_at TIMESTAMP NOT NULL,
+                expires_at TIMESTAMP
+                    NOT NULL,
 
-                used BOOLEAN DEFAULT FALSE,
+                used BOOLEAN
+                    DEFAULT FALSE,
 
                 created_at TIMESTAMP
                     DEFAULT CURRENT_TIMESTAMP
+
             )
+
         `);
 
 
         await pool.query(`
+
             CREATE TABLE IF NOT EXISTS friend_requests (
+
                 id SERIAL PRIMARY KEY,
 
-                sender_id INTEGER NOT NULL
+                sender_id INTEGER
+                    NOT NULL
+
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
 
-                receiver_id INTEGER NOT NULL
+                receiver_id INTEGER
+                    NOT NULL
+
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
 
-                status VARCHAR(20) NOT NULL
+                status VARCHAR(20)
+                    NOT NULL
+
                     DEFAULT 'pending',
 
                 created_at TIMESTAMP
                     DEFAULT CURRENT_TIMESTAMP,
 
-                UNIQUE(sender_id, receiver_id)
+                UNIQUE(
+                    sender_id,
+                    receiver_id
+                )
+
             )
+
         `);
 
 
         await pool.query(`
+
             CREATE TABLE IF NOT EXISTS friendships (
+
                 id SERIAL PRIMARY KEY,
 
-                user_id INTEGER NOT NULL
+                user_id INTEGER
+                    NOT NULL
+
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
 
-                friend_id INTEGER NOT NULL
+                friend_id INTEGER
+                    NOT NULL
+
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
 
                 created_at TIMESTAMP
                     DEFAULT CURRENT_TIMESTAMP,
 
-                UNIQUE(user_id, friend_id)
+                UNIQUE(
+                    user_id,
+                    friend_id
+                )
+
             )
+
         `);
 
 
         await pool.query(`
+
             CREATE TABLE IF NOT EXISTS messages (
+
                 id SERIAL PRIMARY KEY,
 
-                sender_id INTEGER NOT NULL
+                sender_id INTEGER
+                    NOT NULL
+
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
 
-                receiver_id INTEGER NOT NULL
+                receiver_id INTEGER
+                    NOT NULL
+
                     REFERENCES accounts(id)
                     ON DELETE CASCADE,
 
-                message TEXT NOT NULL,
+                message TEXT
+                    NOT NULL,
 
                 created_at TIMESTAMP
                     DEFAULT CURRENT_TIMESTAMP
+
             )
+
         `);
 
 
         await pool.query(`
+
             CREATE INDEX IF NOT EXISTS
             sessions_token_hash_index
+
             ON sessions(token_hash)
+
         `);
 
 
         await pool.query(`
+
             CREATE INDEX IF NOT EXISTS
             sessions_expires_at_index
+
             ON sessions(expires_at)
+
         `);
 
 
         await pool.query(`
+
             CREATE INDEX IF NOT EXISTS
             api_tokens_token_hash_index
+
             ON api_tokens(token_hash)
+
         `);
 
 
         await pool.query(`
+
             CREATE INDEX IF NOT EXISTS
             api_tokens_expires_at_index
+
             ON api_tokens(expires_at)
+
         `);
 
 
         await pool.query(`
+
             CREATE INDEX IF NOT EXISTS
             handoff_tokens_token_hash_index
+
             ON handoff_tokens(token_hash)
+
         `);
 
 
         await pool.query(`
+
             CREATE INDEX IF NOT EXISTS
             handoff_tokens_expires_at_index
+
             ON handoff_tokens(expires_at)
+
         `);
 
 
         await pool.query(`
+
             CREATE INDEX IF NOT EXISTS
             friend_requests_receiver_index
+
             ON friend_requests(receiver_id)
+
         `);
 
 
         await pool.query(`
+
             CREATE INDEX IF NOT EXISTS
             friendships_user_index
+
             ON friendships(user_id)
+
         `);
 
 
         await pool.query(`
+
             CREATE INDEX IF NOT EXISTS
             messages_conversation_index
+
             ON messages(
+
                 sender_id,
+
                 receiver_id,
+
                 created_at
+
             )
+
         `);
 
 
@@ -398,8 +535,11 @@ async function initializeDatabase() {
     } catch (error) {
 
         console.error(
+
             "Database initialization error:",
+
             error
+
         );
 
         process.exit(1);
@@ -416,17 +556,24 @@ SESSION HELPERS
 function createSessionToken() {
 
     return crypto
+
         .randomBytes(32)
+
         .toString("hex");
 
 }
 
 
-function hashSessionToken(token) {
+function hashSessionToken(
+    token
+) {
 
     return crypto
+
         .createHash("sha256")
+
         .update(token)
+
         .digest("hex");
 
 }
@@ -448,28 +595,46 @@ async function createSession(
 
     const expiresAt =
         new Date(
+
             Date.now() +
+
             SESSION_DURATION_MS
+
         );
 
 
     await pool.query(
+
         `
+
         INSERT INTO sessions
+
         (
+
             token_hash,
+
             account_id,
+
             expires_at
+
         )
 
         VALUES
+
         ($1, $2, $3)
+
         `,
+
         [
+
             tokenHash,
+
             accountId,
+
             expiresAt
+
         ]
+
     );
 
 
@@ -501,33 +666,50 @@ async function getAccountFromSession(
 
     const result =
         await pool.query(
+
             `
+
             SELECT
+
                 accounts.id,
+
                 accounts.username,
+
                 accounts.created_at,
+
                 sessions.expires_at
 
             FROM sessions
 
             INNER JOIN accounts
+
                 ON accounts.id =
+
                    sessions.account_id
 
             WHERE
+
                 sessions.token_hash = $1
 
             AND
+
                 sessions.expires_at > NOW()
+
             `,
+
             [
+
                 tokenHash
+
             ]
+
         );
 
 
     if (
+
         result.rows.length === 0
+
     ) {
 
         return null;
@@ -550,8 +732,11 @@ function setSessionCookie(
 ) {
 
     res.cookie(
+
         "core_session",
+
         token,
+
         {
 
             httpOnly:
@@ -570,6 +755,7 @@ function setSessionCookie(
                 "/"
 
         }
+
     );
 
 }
@@ -580,7 +766,9 @@ function clearSessionCookie(
 ) {
 
     res.clearCookie(
+
         "core_session",
+
         {
 
             httpOnly:
@@ -596,6 +784,7 @@ function clearSessionCookie(
                 "/"
 
         }
+
     );
 
 }
@@ -608,7 +797,9 @@ LOGIN HANDOFF TOKEN HELPERS
 function createHandoffToken() {
 
     return crypto
+
         .randomBytes(48)
+
         .toString("hex");
 
 }
@@ -619,8 +810,11 @@ function hashHandoffToken(
 ) {
 
     return crypto
+
         .createHash("sha256")
+
         .update(token)
+
         .digest("hex");
 
 }
@@ -642,29 +836,48 @@ async function createHandoffTokenForAccount(
 
     const expiresAt =
         new Date(
+
             Date.now() +
+
             HANDOFF_TOKEN_DURATION_MS
+
         );
 
 
     await pool.query(
+
         `
+
         INSERT INTO handoff_tokens
+
         (
+
             token_hash,
+
             account_id,
+
             expires_at,
+
             used
+
         )
 
         VALUES
+
         ($1, $2, $3, FALSE)
+
         `,
+
         [
+
             tokenHash,
+
             accountId,
+
             expiresAt
+
         ]
+
     );
 
 
@@ -685,34 +898,49 @@ async function redirectToLauncher(
     try {
 
         const handoffToken =
+
             await createHandoffTokenForAccount(
+
                 accountId
+
             );
 
 
         const redirectURL =
+
             LAUNCHER_URL +
+
             "/?handoff=" +
+
             encodeURIComponent(
+
                 handoffToken
+
             );
 
 
         return res.redirect(
+
             redirectURL
+
         );
 
 
     } catch (error) {
 
         console.error(
+
             "Launcher handoff creation error:",
+
             error
+
         );
 
 
         return res.status(500).send(
+
             "Unable to complete launcher login."
+
         );
 
     }
@@ -727,10 +955,15 @@ API TOKEN HELPERS
 function createApiToken() {
 
     return (
+
         "cga_" +
+
         crypto
+
             .randomBytes(48)
+
             .toString("hex")
+
     );
 
 }
@@ -741,8 +974,11 @@ function hashApiToken(
 ) {
 
     return crypto
+
         .createHash("sha256")
+
         .update(token)
+
         .digest("hex");
 
 }
@@ -764,28 +1000,46 @@ async function createApiTokenForAccount(
 
     const expiresAt =
         new Date(
+
             Date.now() +
+
             API_TOKEN_DURATION_MS
+
         );
 
 
     await pool.query(
+
         `
+
         INSERT INTO api_tokens
+
         (
+
             token_hash,
+
             account_id,
+
             expires_at
+
         )
 
         VALUES
+
         ($1, $2, $3)
+
         `,
+
         [
+
             tokenHash,
+
             accountId,
+
             expiresAt
+
         ]
+
     );
 
 
@@ -820,8 +1074,12 @@ async function getAccountFromApiToken(
 
 
     if (
+
         parts.length !== 2 ||
-        parts[0].toLowerCase() !== "bearer"
+
+        parts[0].toLowerCase() !==
+            "bearer"
+
     ) {
 
         return null;
@@ -848,33 +1106,50 @@ async function getAccountFromApiToken(
 
     const result =
         await pool.query(
+
             `
+
             SELECT
+
                 accounts.id,
+
                 accounts.username,
+
                 accounts.created_at,
+
                 api_tokens.expires_at
 
             FROM api_tokens
 
             INNER JOIN accounts
+
                 ON accounts.id =
+
                    api_tokens.account_id
 
             WHERE
+
                 api_tokens.token_hash = $1
 
             AND
+
                 api_tokens.expires_at > NOW()
+
             `,
+
             [
+
                 tokenHash
+
             ]
+
         );
 
 
     if (
+
         result.rows.length === 0
+
     ) {
 
         return null;
@@ -892,23 +1167,34 @@ REGISTER
 ========================================================= */
 
 app.post(
+
     "/api/register",
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const username =
+
                 String(
+
                     req.body.username || ""
+
                 ).trim();
 
 
             const password =
+
                 String(
+
                     req.body.password || ""
+
                 );
 
 
@@ -928,8 +1214,11 @@ app.post(
 
 
             if (
+
                 username.length < 3 ||
+
                 username.length > 20
+
             ) {
 
                 return res.status(400).json({
@@ -946,9 +1235,13 @@ app.post(
 
 
             if (
+
                 !/^[a-zA-Z0-9_]+$/.test(
+
                     username
+
                 )
+
             ) {
 
                 return res.status(400).json({
@@ -980,7 +1273,9 @@ app.post(
 
 
             if (
+
                 password.length < 8
+
             ) {
 
                 return res.status(400).json({
@@ -997,24 +1292,36 @@ app.post(
 
 
             const existingAccount =
+
                 await pool.query(
+
                     `
+
                     SELECT id
 
                     FROM accounts
 
                     WHERE
+
                         LOWER(username) =
+
                         LOWER($1)
+
                     `,
+
                     [
+
                         username
+
                     ]
+
                 );
 
 
             if (
+
                 existingAccount.rows.length > 0
+
             ) {
 
                 return res.status(409).json({
@@ -1031,33 +1338,54 @@ app.post(
 
 
             const passwordHash =
+
                 await bcrypt.hash(
+
                     password,
+
                     12
+
                 );
 
 
             const result =
+
                 await pool.query(
+
                     `
+
                     INSERT INTO accounts
+
                     (
+
                         username,
+
                         password_hash
+
                     )
 
                     VALUES
+
                     ($1, $2)
 
                     RETURNING
+
                         id,
+
                         username,
+
                         created_at
+
                     `,
+
                     [
+
                         username,
+
                         passwordHash
+
                     ]
+
                 );
 
 
@@ -1066,37 +1394,46 @@ app.post(
 
 
             const sessionToken =
+
                 await createSession(
+
                     account.id
+
                 );
 
 
             setSessionCookie(
+
                 res,
+
                 sessionToken
+
             );
 
 
             console.log(
+
                 "New Core Games account created: " +
+
                 account.username
+
             );
 
 
-            /*
-            If the user came from the launcher,
-            send them back through a one-time
-            handoff token.
-            */
-
             if (
+
                 req.query.returnTo ===
+
                 "launcher"
+
             ) {
 
                 return redirectToLauncher(
+
                     res,
+
                     account.id
+
                 );
 
             }
@@ -1119,8 +1456,11 @@ app.post(
         } catch (error) {
 
             console.error(
+
                 "Registration error:",
+
                 error
+
             );
 
 
@@ -1137,6 +1477,7 @@ app.post(
         }
 
     }
+
 );
 
 
@@ -1145,29 +1486,43 @@ LOGIN
 ========================================================= */
 
 app.post(
+
     "/api/login",
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const username =
+
                 String(
+
                     req.body.username || ""
+
                 ).trim();
 
 
             const password =
+
                 String(
+
                     req.body.password || ""
+
                 );
 
 
             if (
+
                 !username ||
+
                 !password
+
             ) {
 
                 return res.status(400).json({
@@ -1184,22 +1539,35 @@ app.post(
 
 
             const result =
+
                 await pool.query(
+
                     `
+
                     SELECT
+
                         id,
+
                         username,
+
                         password_hash
 
                     FROM accounts
 
                     WHERE
+
                         LOWER(username) =
+
                         LOWER($1)
+
                     `,
+
                     [
+
                         username
+
                     ]
+
                 );
 
 
@@ -1223,9 +1591,13 @@ app.post(
 
 
             const passwordMatches =
+
                 await bcrypt.compare(
+
                     password,
+
                     account.password_hash
+
                 );
 
 
@@ -1245,37 +1617,46 @@ app.post(
 
 
             const sessionToken =
+
                 await createSession(
+
                     account.id
+
                 );
 
 
             setSessionCookie(
+
                 res,
+
                 sessionToken
+
             );
 
 
             console.log(
+
                 "Account logged in: " +
+
                 account.username
+
             );
 
 
-            /*
-            If the user came from the launcher,
-            create a one-time handoff token
-            and redirect them back to the launcher.
-            */
-
             if (
+
                 req.query.returnTo ===
+
                 "launcher"
+
             ) {
 
                 return redirectToLauncher(
+
                     res,
+
                     account.id
+
                 );
 
             }
@@ -1298,8 +1679,11 @@ app.post(
         } catch (error) {
 
             console.error(
+
                 "Login error:",
+
                 error
+
             );
 
 
@@ -1316,6 +1700,7 @@ app.post(
         }
 
     }
+
 );
 
 
@@ -1324,17 +1709,25 @@ LOGIN HANDOFF EXCHANGE
 ========================================================= */
 
 app.post(
+
     "/api/handoff/exchange",
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const token =
+
                 String(
+
                     req.body.token || ""
+
                 ).trim();
 
 
@@ -1354,16 +1747,24 @@ app.post(
 
 
             const tokenHash =
+
                 hashHandoffToken(
+
                     token
+
                 );
 
 
             const result =
+
                 await pool.query(
+
                     `
+
                     SELECT
+
                         handoff_tokens.id
+
                             AS handoff_id,
 
                         handoff_tokens.account_id,
@@ -1375,28 +1776,40 @@ app.post(
                     FROM handoff_tokens
 
                     INNER JOIN accounts
+
                         ON accounts.id =
+
                            handoff_tokens.account_id
 
                     WHERE
+
                         handoff_tokens.token_hash = $1
 
                     AND
+
                         handoff_tokens.expires_at > NOW()
 
                     AND
+
                         handoff_tokens.used = FALSE
 
                     LIMIT 1
+
                     `,
+
                     [
+
                         tokenHash
+
                     ]
+
                 );
 
 
             if (
+
                 result.rows.length === 0
+
             ) {
 
                 return res.status(401).json({
@@ -1416,38 +1829,43 @@ app.post(
                 result.rows[0];
 
 
-            /*
-            Mark the token as used BEFORE
-            creating the new launcher session.
-
-            This prevents the same handoff
-            token from being reused.
-            */
-
             const updateResult =
+
                 await pool.query(
+
                     `
+
                     UPDATE handoff_tokens
 
                     SET
+
                         used = TRUE
 
                     WHERE
+
                         id = $1
 
                     AND
+
                         used = FALSE
 
                     RETURNING id
+
                     `,
+
                     [
+
                         account.handoff_id
+
                     ]
+
                 );
 
 
             if (
+
                 updateResult.rowCount === 0
+
             ) {
 
                 return res.status(401).json({
@@ -1463,28 +1881,30 @@ app.post(
             }
 
 
-            /*
-            Create a normal Core Games session.
-
-            The launcher can then use this session
-            with /api/me.
-            */
-
             const sessionToken =
+
                 await createSession(
+
                     account.account_id
+
                 );
 
 
             setSessionCookie(
+
                 res,
+
                 sessionToken
+
             );
 
 
             console.log(
+
                 "Launcher login handoff completed for: " +
+
                 account.username
+
             );
 
 
@@ -1512,8 +1932,11 @@ app.post(
         } catch (error) {
 
             console.error(
+
                 "Login handoff exchange error:",
+
                 error
+
             );
 
 
@@ -1530,6 +1953,7 @@ app.post(
         }
 
     }
+
 );
 
 
@@ -1538,17 +1962,25 @@ CHECK CURRENT SESSION
 ========================================================= */
 
 app.get(
+
     "/api/me",
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const account =
+
                 await getAccountFromSession(
+
                     req
+
                 );
 
 
@@ -1590,8 +2022,11 @@ app.get(
         } catch (error) {
 
             console.error(
+
                 "Session check error:",
+
                 error
+
             );
 
 
@@ -1608,6 +2043,7 @@ app.get(
         }
 
     }
+
 );
 
 
@@ -1616,17 +2052,25 @@ SESSION ALIAS
 ========================================================= */
 
 app.get(
+
     "/api/session",
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const account =
+
                 await getAccountFromSession(
+
                     req
+
                 );
 
 
@@ -1668,8 +2112,11 @@ app.get(
         } catch (error) {
 
             console.error(
+
                 "Session endpoint error:",
+
                 error
+
             );
 
 
@@ -1686,6 +2133,7 @@ app.get(
         }
 
     }
+
 );
 
 
@@ -1694,43 +2142,62 @@ LOGOUT
 ========================================================= */
 
 app.post(
+
     "/api/logout",
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const token =
+
                 req.cookies.core_session;
 
 
             if (token) {
 
                 const tokenHash =
+
                     hashSessionToken(
+
                         token
+
                     );
 
 
                 await pool.query(
+
                     `
+
                     DELETE FROM sessions
 
                     WHERE
+
                         token_hash = $1
+
                     `,
+
                     [
+
                         tokenHash
+
                     ]
+
                 );
 
             }
 
 
             clearSessionCookie(
+
                 res
+
             );
 
 
@@ -1748,13 +2215,18 @@ app.post(
         } catch (error) {
 
             console.error(
+
                 "Logout error:",
+
                 error
+
             );
 
 
             clearSessionCookie(
+
                 res
+
             );
 
 
@@ -1771,6 +2243,7 @@ app.post(
         }
 
     }
+
 );
 
 
@@ -1779,16 +2252,23 @@ SOCIAL AUTHENTICATION MIDDLEWARE
 ========================================================= */
 
 async function requireLogin(
+
     req,
+
     res,
+
     next
+
 ) {
 
     try {
 
         const account =
+
             await getAccountFromSession(
+
                 req
+
             );
 
 
@@ -1817,8 +2297,11 @@ async function requireLogin(
     } catch (error) {
 
         console.error(
+
             "Authentication error:",
+
             error
+
         );
 
 
@@ -1842,23 +2325,34 @@ USER SEARCH
 ========================================================= */
 
 app.get(
+
     "/api/users/search",
+
     requireLogin,
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const query =
+
                 String(
+
                     req.query.q || ""
+
                 ).trim();
 
 
             if (
+
                 query.length < 2
+
             ) {
 
                 return res.json({
@@ -1875,29 +2369,43 @@ app.get(
 
 
             const result =
+
                 await pool.query(
+
                     `
+
                     SELECT
+
                         id,
+
                         username
 
                     FROM accounts
 
                     WHERE
+
                         username ILIKE $1
 
                     AND
+
                         id != $2
 
                     ORDER BY
+
                         username
 
                     LIMIT 20
+
                     `,
+
                     [
+
                         `%${query}%`,
+
                         req.account.id
+
                     ]
+
                 );
 
 
@@ -1915,8 +2423,11 @@ app.get(
         } catch (error) {
 
             console.error(
+
                 "User search error:",
+
                 error
+
             );
 
 
@@ -1933,6 +2444,7 @@ app.get(
         }
 
     }
+
 );
 
 
@@ -1941,18 +2453,27 @@ SEND FRIEND REQUEST
 ========================================================= */
 
 app.post(
+
     "/api/friends/request",
+
     requireLogin,
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const username =
+
                 String(
+
                     req.body.username || ""
+
                 ).trim();
 
 
@@ -1972,26 +2493,40 @@ app.post(
 
 
             const userResult =
+
                 await pool.query(
+
                     `
+
                     SELECT
+
                         id,
+
                         username
 
                     FROM accounts
 
                     WHERE
+
                         LOWER(username) =
+
                         LOWER($1)
+
                     `,
+
                     [
+
                         username
+
                     ]
+
                 );
 
 
             if (
+
                 userResult.rows.length === 0
+
             ) {
 
                 return res.status(404).json({
@@ -2012,8 +2547,11 @@ app.post(
 
 
             if (
+
                 target.id ===
+
                 req.account.id
+
             ) {
 
                 return res.status(400).json({
@@ -2030,38 +2568,58 @@ app.post(
 
 
             const friendship =
+
                 await pool.query(
+
                     `
+
                     SELECT id
 
                     FROM friendships
 
                     WHERE
+
                     (
+
                         user_id = $1
+
                         AND
+
                         friend_id = $2
+
                     )
 
                     OR
 
                     (
+
                         user_id = $2
+
                         AND
+
                         friend_id = $1
+
                     )
 
                     LIMIT 1
+
                     `,
+
                     [
+
                         req.account.id,
+
                         target.id
+
                     ]
+
                 );
 
 
             if (
+
                 friendship.rows.length > 0
+
             ) {
 
                 return res.status(409).json({
@@ -2078,47 +2636,74 @@ app.post(
 
 
             const existingRequest =
+
                 await pool.query(
+
                     `
+
                     SELECT
+
                         id,
+
                         sender_id,
+
                         receiver_id,
+
                         status
 
                     FROM friend_requests
 
                     WHERE
+
                     (
+
                         (
+
                             sender_id = $1
+
                             AND
+
                             receiver_id = $2
+
                         )
 
                         OR
 
                         (
+
                             sender_id = $2
+
                             AND
+
                             receiver_id = $1
+
                         )
+
                     )
 
                     AND
+
                         status = 'pending'
 
                     LIMIT 1
+
                     `,
+
                     [
+
                         req.account.id,
+
                         target.id
+
                     ]
+
                 );
 
 
             if (
+
                 existingRequest.rows.length > 0
+
             ) {
 
                 return res.status(409).json({
@@ -2135,20 +2720,33 @@ app.post(
 
 
             await pool.query(
+
                 `
+
                 INSERT INTO friend_requests
+
                 (
+
                     sender_id,
+
                     receiver_id
+
                 )
 
                 VALUES
+
                 ($1, $2)
+
                 `,
+
                 [
+
                     req.account.id,
+
                     target.id
+
                 ]
+
             );
 
 
@@ -2166,8 +2764,11 @@ app.post(
         } catch (error) {
 
             console.error(
+
                 "Friend request error:",
+
                 error
+
             );
 
 
@@ -2184,6 +2785,7 @@ app.post(
         }
 
     }
+
 );
 
 
@@ -2192,42 +2794,65 @@ GET FRIEND REQUESTS
 ========================================================= */
 
 app.get(
+
     "/api/friends/requests",
+
     requireLogin,
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const result =
+
                 await pool.query(
+
                     `
+
                     SELECT
+
                         friend_requests.id,
+
                         accounts.username,
+
                         friend_requests.created_at
 
                     FROM friend_requests
 
                     INNER JOIN accounts
+
                         ON accounts.id =
+
                            friend_requests.sender_id
 
                     WHERE
+
                         friend_requests.receiver_id = $1
 
                     AND
+
                         friend_requests.status =
+
                         'pending'
 
                     ORDER BY
+
                         friend_requests.created_at DESC
+
                     `,
+
                     [
+
                         req.account.id
+
                     ]
+
                 );
 
 
@@ -2245,8 +2870,11 @@ app.get(
         } catch (error) {
 
             console.error(
+
                 "Friend request list error:",
+
                 error
+
             );
 
 
@@ -2263,6 +2891,7 @@ app.get(
         }
 
     }
+
 );
 
 
@@ -2271,11 +2900,17 @@ ACCEPT FRIEND REQUEST
 ========================================================= */
 
 app.post(
+
     "/api/friends/requests/:id/accept",
+
     requireLogin,
+
     async (
+
         req,
+
         res
+
     ) => {
 
         const client =
@@ -2285,44 +2920,65 @@ app.post(
         try {
 
             await client.query(
+
                 "BEGIN"
+
             );
 
 
             const requestResult =
+
                 await client.query(
+
                     `
+
                     SELECT
+
                         id,
+
                         sender_id,
+
                         receiver_id
 
                     FROM friend_requests
 
                     WHERE
+
                         id = $1
 
                     AND
+
                         receiver_id = $2
 
                     AND
+
                         status = 'pending'
 
                     FOR UPDATE
+
                     `,
+
                     [
+
                         req.params.id,
+
                         req.account.id
+
                     ]
+
                 );
 
 
             if (
+
                 requestResult.rows.length === 0
+
             ) {
 
                 await client.query(
+
                     "ROLLBACK"
+
                 );
 
 
@@ -2340,48 +2996,74 @@ app.post(
 
 
             const request =
+
                 requestResult.rows[0];
 
 
             await client.query(
+
                 `
+
                 UPDATE friend_requests
 
                 SET
+
                     status = 'accepted'
 
                 WHERE
+
                     id = $1
+
                 `,
+
                 [
+
                     request.id
+
                 ]
+
             );
 
 
             await client.query(
+
                 `
+
                 INSERT INTO friendships
+
                 (
+
                     user_id,
+
                     friend_id
+
                 )
 
                 VALUES
+
                 ($1, $2),
+
                 ($2, $1)
 
                 ON CONFLICT DO NOTHING
+
                 `,
+
                 [
+
                     request.sender_id,
+
                     request.receiver_id
+
                 ]
+
             );
 
 
             await client.query(
+
                 "COMMIT"
+
             );
 
 
@@ -2399,13 +3081,18 @@ app.post(
         } catch (error) {
 
             await client.query(
+
                 "ROLLBACK"
+
             );
 
 
             console.error(
+
                 "Accept friend request error:",
+
                 error
+
             );
 
 
@@ -2427,6 +3114,7 @@ app.post(
         }
 
     }
+
 );
 
 
@@ -2435,37 +3123,56 @@ DECLINE FRIEND REQUEST
 ========================================================= */
 
 app.post(
+
     "/api/friends/requests/:id/decline",
+
     requireLogin,
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const result =
+
                 await pool.query(
+
                     `
+
                     DELETE FROM friend_requests
 
                     WHERE
+
                         id = $1
 
                     AND
+
                         receiver_id = $2
 
                     RETURNING id
+
                     `,
+
                     [
+
                         req.params.id,
+
                         req.account.id
+
                     ]
+
                 );
 
 
             if (
+
                 result.rowCount === 0
+
             ) {
 
                 return res.status(404).json({
@@ -2495,8 +3202,11 @@ app.post(
         } catch (error) {
 
             console.error(
+
                 "Decline friend request error:",
+
                 error
+
             );
 
 
@@ -2513,6 +3223,7 @@ app.post(
         }
 
     }
+
 );
 
 
@@ -2521,37 +3232,57 @@ GET FRIENDS
 ========================================================= */
 
 app.get(
+
     "/api/friends",
+
     requireLogin,
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const result =
+
                 await pool.query(
+
                     `
+
                     SELECT
+
                         accounts.id,
+
                         accounts.username
 
                     FROM friendships
 
                     INNER JOIN accounts
+
                         ON accounts.id =
+
                            friendships.friend_id
 
                     WHERE
+
                         friendships.user_id = $1
 
                     ORDER BY
+
                         accounts.username
+
                     `,
+
                     [
+
                         req.account.id
+
                     ]
+
                 );
 
 
@@ -2569,8 +3300,11 @@ app.get(
         } catch (error) {
 
             console.error(
+
                 "Friends list error:",
+
                 error
+
             );
 
 
@@ -2587,6 +3321,7 @@ app.get(
         }
 
     }
+
 );
 
 
@@ -2595,38 +3330,61 @@ REMOVE FRIEND
 ========================================================= */
 
 app.delete(
+
     "/api/friends/:friendId",
+
     requireLogin,
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             await pool.query(
+
                 `
+
                 DELETE FROM friendships
 
                 WHERE
+
                 (
+
                     user_id = $1
+
                     AND
+
                     friend_id = $2
+
                 )
 
                 OR
 
                 (
+
                     user_id = $2
+
                     AND
+
                     friend_id = $1
+
                 )
+
                 `,
+
                 [
+
                     req.account.id,
+
                     req.params.friendId
+
                 ]
+
             );
 
 
@@ -2644,8 +3402,11 @@ app.delete(
         } catch (error) {
 
             console.error(
+
                 "Remove friend error:",
+
                 error
+
             );
 
 
@@ -2662,6 +3423,7 @@ app.delete(
         }
 
     }
+
 );
 
 
@@ -2670,25 +3432,38 @@ GET MESSAGE HISTORY
 ========================================================= */
 
 app.get(
+
     "/api/messages/:friendId",
+
     requireLogin,
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const friendId =
+
                 Number(
+
                     req.params.friendId
+
                 );
 
 
             if (
+
                 !Number.isInteger(
+
                     friendId
+
                 )
+
             ) {
 
                 return res.status(400).json({
@@ -2705,27 +3480,40 @@ app.get(
 
 
             const friendship =
+
                 await pool.query(
+
                     `
+
                     SELECT id
 
                     FROM friendships
 
                     WHERE
+
                         user_id = $1
 
                     AND
+
                         friend_id = $2
+
                     `,
+
                     [
+
                         req.account.id,
+
                         friendId
+
                     ]
+
                 );
 
 
             if (
+
                 friendship.rows.length === 0
+
             ) {
 
                 return res.status(403).json({
@@ -2742,19 +3530,25 @@ app.get(
 
 
             const result =
+
                 await pool.query(
+
                     `
+
                     SELECT
+
                         messages.id,
 
                         messages.sender_id,
 
                         sender.username
+
                             AS sender_username,
 
                         messages.receiver_id,
 
                         receiver.username
+
                             AS receiver_username,
 
                         messages.message,
@@ -2764,37 +3558,57 @@ app.get(
                     FROM messages
 
                     INNER JOIN accounts sender
+
                         ON sender.id =
+
                            messages.sender_id
 
                     INNER JOIN accounts receiver
+
                         ON receiver.id =
+
                            messages.receiver_id
 
                     WHERE
+
                     (
+
                         messages.sender_id = $1
+
                         AND
+
                         messages.receiver_id = $2
+
                     )
 
                     OR
 
                     (
+
                         messages.sender_id = $2
+
                         AND
+
                         messages.receiver_id = $1
+
                     )
 
                     ORDER BY
+
                         messages.created_at ASC
 
                     LIMIT 100
+
                     `,
+
                     [
+
                         req.account.id,
+
                         friendId
+
                     ]
+
                 );
 
 
@@ -2812,8 +3626,11 @@ app.get(
         } catch (error) {
 
             console.error(
+
                 "Message history error:",
+
                 error
+
             );
 
 
@@ -2830,6 +3647,7 @@ app.get(
         }
 
     }
+
 );
 
 
@@ -2838,17 +3656,25 @@ CREATE API TOKEN
 ========================================================= */
 
 app.post(
+
     "/api/v1/tokens",
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const account =
+
                 await getAccountFromSession(
+
                     req
+
                 );
 
 
@@ -2868,8 +3694,11 @@ app.post(
 
 
             const apiToken =
+
                 await createApiTokenForAccount(
+
                     account.id
+
                 );
 
 
@@ -2899,8 +3728,11 @@ app.post(
         } catch (error) {
 
             console.error(
+
                 "API token creation error:",
+
                 error
+
             );
 
 
@@ -2917,6 +3749,7 @@ app.post(
         }
 
     }
+
 );
 
 
@@ -2925,17 +3758,25 @@ VERIFY API TOKEN
 ========================================================= */
 
 app.get(
+
     "/api/v1/me",
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const account =
+
                 await getAccountFromApiToken(
+
                     req
+
                 );
 
 
@@ -2987,8 +3828,11 @@ app.get(
         } catch (error) {
 
             console.error(
+
                 "API authentication error:",
+
                 error
+
             );
 
 
@@ -3008,6 +3852,134 @@ app.get(
         }
 
     }
+
+);
+
+
+/* =========================================================
+BAD APPLES+ ACCOUNT LINKING
+========================================================= */
+
+/*
+Bad Apples+ uses this endpoint to verify
+a Core Games API token.
+
+The Bad Apples+ server sends:
+
+Authorization: Bearer cga_...
+
+The Core Games Accounts server verifies
+the token and returns the verified account.
+
+Bad Apples+ should use the returned
+account ID as the permanent identity.
+*/
+
+app.get(
+
+    "/api/bad-apples/account",
+
+    async (
+
+        req,
+
+        res
+
+    ) => {
+
+        try {
+
+            const account =
+
+                await getAccountFromApiToken(
+
+                    req
+
+                );
+
+
+            if (!account) {
+
+                return res.status(401).json({
+
+                    success:
+                        false,
+
+                    authenticated:
+                        false,
+
+                    game:
+                        "Bad Apples+",
+
+                    message:
+                        "Invalid or expired Core Games API token."
+
+                });
+
+            }
+
+
+            return res.json({
+
+                success:
+                    true,
+
+                authenticated:
+                    true,
+
+                game:
+                    "Bad Apples+",
+
+                user: {
+
+                    id:
+                        account.id,
+
+                    username:
+                        account.username,
+
+                    createdAt:
+                        account.created_at
+
+                },
+
+                tokenExpiresAt:
+                    account.expires_at
+
+            });
+
+
+        } catch (error) {
+
+            console.error(
+
+                "Bad Apples+ account verification error:",
+
+                error
+
+            );
+
+
+            return res.status(500).json({
+
+                success:
+                    false,
+
+                authenticated:
+                    false,
+
+                game:
+                    "Bad Apples+",
+
+                message:
+                    "Unable to verify Core Games account."
+
+            });
+
+        }
+
+    }
+
 );
 
 
@@ -3016,15 +3988,21 @@ REVOKE API TOKEN
 ========================================================= */
 
 app.delete(
+
     "/api/v1/tokens",
+
     async (
+
         req,
+
         res
+
     ) => {
 
         try {
 
             const authorization =
+
                 req.headers.authorization;
 
 
@@ -3044,12 +4022,18 @@ app.delete(
 
 
             const parts =
+
                 authorization.split(" ");
 
 
             if (
+
                 parts.length !== 2 ||
-                parts[0].toLowerCase() !== "bearer"
+
+                parts[0].toLowerCase() !==
+
+                    "bearer"
+
             ) {
 
                 return res.status(400).json({
@@ -3070,29 +4054,43 @@ app.delete(
 
 
             const tokenHash =
+
                 hashApiToken(
+
                     token
+
                 );
 
 
             const result =
+
                 await pool.query(
+
                     `
+
                     DELETE FROM api_tokens
 
                     WHERE
+
                         token_hash = $1
 
                     RETURNING id
+
                     `,
+
                     [
+
                         tokenHash
+
                     ]
+
                 );
 
 
             if (
+
                 result.rowCount === 0
+
             ) {
 
                 return res.status(404).json({
@@ -3122,8 +4120,11 @@ app.delete(
         } catch (error) {
 
             console.error(
+
                 "API token revocation error:",
+
                 error
+
             );
 
 
@@ -3140,6 +4141,7 @@ app.delete(
         }
 
     }
+
 );
 
 
@@ -3148,23 +4150,32 @@ SOCKET.IO AUTHENTICATION
 ========================================================= */
 
 io.use(
+
     async (
+
         socket,
+
         next
+
     ) => {
 
         try {
 
             const cookieHeader =
+
                 socket.handshake.headers.cookie;
 
 
             if (!cookieHeader) {
 
                 return next(
+
                     new Error(
+
                         "Not authenticated"
+
                     )
+
                 );
 
             }
@@ -3174,97 +4185,138 @@ io.use(
 
 
             cookieHeader
+
                 .split(";")
+
                 .forEach(
+
                     cookie => {
 
                         const parts =
+
                             cookie
+
                                 .trim()
+
                                 .split("=");
 
 
                         const key =
+
                             parts.shift();
 
 
                         const value =
+
                             parts.join("=");
 
 
                         if (key) {
 
                             cookies[key] =
+
                                 decodeURIComponent(
+
                                     value
+
                                 );
 
                         }
 
                     }
+
                 );
 
 
             const token =
+
                 cookies.core_session;
 
 
             if (!token) {
 
                 return next(
+
                     new Error(
+
                         "Not authenticated"
+
                     )
+
                 );
 
             }
 
 
             const tokenHash =
+
                 hashSessionToken(
+
                     token
+
                 );
 
 
             const result =
+
                 await pool.query(
+
                     `
+
                     SELECT
+
                         accounts.id,
+
                         accounts.username
 
                     FROM sessions
 
                     INNER JOIN accounts
+
                         ON accounts.id =
+
                            sessions.account_id
 
                     WHERE
+
                         sessions.token_hash = $1
 
                     AND
+
                         sessions.expires_at > NOW()
+
                     `,
+
                     [
+
                         tokenHash
+
                     ]
+
                 );
 
 
             if (
+
                 result.rows.length === 0
+
             ) {
 
                 return next(
+
                     new Error(
+
                         "Session expired"
+
                     )
+
                 );
 
             }
 
 
             socket.account =
+
                 result.rows[0];
 
 
@@ -3274,20 +4326,28 @@ io.use(
         } catch (error) {
 
             console.error(
+
                 "Socket authentication error:",
+
                 error
+
             );
 
 
             next(
+
                 new Error(
+
                     "Authentication failed"
+
                 )
+
             );
 
         }
 
     }
+
 );
 
 
@@ -3300,40 +4360,67 @@ const onlineUsers =
 
 
 function setUserOnline(
+
     accountId,
+
     socketId
+
 ) {
 
     if (
+
         !onlineUsers.has(
+
             accountId
+
         )
+
     ) {
 
         onlineUsers.set(
+
             accountId,
+
             new Set()
+
         );
 
     }
 
 
     onlineUsers
-        .get(accountId)
-        .add(socketId);
+
+        .get(
+
+            accountId
+
+        )
+
+        .add(
+
+            socketId
+
+        );
 
 }
 
 
 function setUserOffline(
+
     accountId,
+
     socketId
+
 ) {
 
     if (
+
         !onlineUsers.has(
+
             accountId
+
         )
+
     ) {
 
         return;
@@ -3342,22 +4429,31 @@ function setUserOffline(
 
 
     const sockets =
+
         onlineUsers.get(
+
             accountId
+
         );
 
 
     sockets.delete(
+
         socketId
+
     );
 
 
     if (
+
         sockets.size === 0
+
     ) {
 
         onlineUsers.delete(
+
             accountId
+
         );
 
     }
@@ -3366,11 +4462,15 @@ function setUserOffline(
 
 
 function isUserOnline(
+
     accountId
+
 ) {
 
     return onlineUsers.has(
+
         accountId
+
     );
 
 }
@@ -3381,27 +4481,38 @@ SOCKET.IO CONNECTION
 ========================================================= */
 
 io.on(
+
     "connection",
+
     socket => {
 
         const account =
+
             socket.account;
 
 
         setUserOnline(
+
             account.id,
+
             socket.id
+
         );
 
 
         console.log(
+
             "User connected: " +
+
             account.username
+
         );
 
 
         socket.emit(
+
             "presence",
+
             {
 
                 userId:
@@ -3411,178 +4522,255 @@ io.on(
                     true
 
             }
+
         );
 
 
         socket.on(
+
             "getPresence",
+
             userId => {
 
                 const numericUserId =
+
                     Number(
+
                         userId
+
                     );
 
 
                 socket.emit(
+
                     "presence",
+
                     {
 
                         userId:
                             numericUserId,
 
                         online:
+
                             isUserOnline(
+
                                 numericUserId
+
                             )
 
                     }
+
                 );
 
             }
+
         );
 
 
         socket.on(
+
             "sendMessage",
+
             async data => {
 
                 try {
 
                     const receiverId =
+
                         Number(
+
                             data.receiverId
+
                         );
 
 
                     const message =
+
                         String(
+
                             data.message || ""
+
                         ).trim();
 
 
                     if (
+
                         !Number.isInteger(
+
                             receiverId
+
                         )
+
                     ) {
 
                         return socket.emit(
+
                             "messageError",
+
                             {
 
                                 message:
                                     "Invalid receiver."
 
                             }
+
                         );
 
                     }
 
 
                     if (
+
                         receiverId ===
+
                         account.id
+
                     ) {
 
                         return socket.emit(
+
                             "messageError",
+
                             {
 
                                 message:
                                     "You cannot message yourself."
 
                             }
+
                         );
 
                     }
 
 
                     if (
+
                         !message ||
+
                         message.length > 2000
+
                     ) {
 
                         return socket.emit(
+
                             "messageError",
+
                             {
 
                                 message:
                                     "Message must be between 1 and 2000 characters."
 
                             }
+
                         );
 
                     }
 
 
                     const friendship =
+
                         await pool.query(
+
                             `
+
                             SELECT id
 
                             FROM friendships
 
                             WHERE
+
                                 user_id = $1
 
                             AND
+
                                 friend_id = $2
+
                             `,
+
                             [
+
                                 account.id,
+
                                 receiverId
+
                             ]
+
                         );
 
 
                     if (
+
                         friendship.rows.length === 0
+
                     ) {
 
                         return socket.emit(
+
                             "messageError",
+
                             {
 
                                 message:
                                     "You can only message your friends."
 
                             }
+
                         );
 
                     }
 
 
                     const result =
+
                         await pool.query(
+
                             `
+
                             INSERT INTO messages
 
                             (
+
                                 sender_id,
+
                                 receiver_id,
+
                                 message
+
                             )
 
                             VALUES
+
                             ($1, $2, $3)
 
                             RETURNING
+
                                 id,
+
                                 sender_id,
+
                                 receiver_id,
+
                                 message,
+
                                 created_at
+
                             `,
+
                             [
+
                                 account.id,
+
                                 receiverId,
+
                                 message
+
                             ]
+
                         );
 
 
                     const savedMessage =
+
                         result.rows[0];
 
 
@@ -3607,28 +4795,44 @@ io.on(
 
 
                     socket.emit(
+
                         "newMessage",
+
                         messageData
+
                     );
 
 
                     for (
+
                         const [
+
                             socketId,
+
                             socketSet
+
                         ]
+
                         of io.sockets.sockets
+
                     ) {
 
                         if (
+
                             socketSet.account &&
+
                             socketSet.account.id ===
+
                                 receiverId
+
                         ) {
 
                             socketSet.emit(
+
                                 "newMessage",
+
                                 messageData
+
                             );
 
                         }
@@ -3639,52 +4843,69 @@ io.on(
                 } catch (error) {
 
                     console.error(
+
                         "Socket message error:",
+
                         error
+
                     );
 
 
                     socket.emit(
+
                         "messageError",
+
                         {
 
                             message:
                                 "Unable to send message."
 
                         }
+
                     );
 
                 }
 
             }
+
         );
 
 
         socket.on(
+
             "disconnect",
+
             () => {
 
                 setUserOffline(
+
                     account.id,
+
                     socket.id
+
                 );
 
 
                 console.log(
+
                     "User disconnected: " +
+
                     account.username
+
                 );
 
             }
+
         );
 
     }
+
 );
 
 
 /* =========================================================
-CLEAN EXPIRED SESSIONS, API TOKENS,
-AND HANDOFF TOKENS
+CLEAN EXPIRED SESSIONS,
+API TOKENS, AND HANDOFF TOKENS
 ========================================================= */
 
 async function cleanExpiredSessions() {
@@ -3692,24 +4913,34 @@ async function cleanExpiredSessions() {
     try {
 
         const sessionResult =
+
             await pool.query(
+
                 `
+
                 DELETE FROM sessions
 
                 WHERE
+
                     expires_at <= NOW()
+
                 `
+
             );
 
 
         if (
+
             sessionResult.rowCount > 0
+
         ) {
 
             console.log(
 
                 "Cleaned " +
+
                 sessionResult.rowCount +
+
                 " expired session(s)."
 
             );
@@ -3718,24 +4949,34 @@ async function cleanExpiredSessions() {
 
 
         const apiTokenResult =
+
             await pool.query(
+
                 `
+
                 DELETE FROM api_tokens
 
                 WHERE
+
                     expires_at <= NOW()
+
                 `
+
             );
 
 
         if (
+
             apiTokenResult.rowCount > 0
+
         ) {
 
             console.log(
 
                 "Cleaned " +
+
                 apiTokenResult.rowCount +
+
                 " expired API token(s)."
 
             );
@@ -3744,27 +4985,38 @@ async function cleanExpiredSessions() {
 
 
         const handoffResult =
+
             await pool.query(
+
                 `
+
                 DELETE FROM handoff_tokens
 
                 WHERE
+
                     expires_at <= NOW()
 
                 OR
+
                     used = TRUE
+
                 `
+
             );
 
 
         if (
+
             handoffResult.rowCount > 0
+
         ) {
 
             console.log(
 
                 "Cleaned " +
+
                 handoffResult.rowCount +
+
                 " expired or used handoff token(s)."
 
             );
@@ -3788,8 +5040,11 @@ async function cleanExpiredSessions() {
 
 
 setInterval(
+
     cleanExpiredSessions,
+
     60 * 60 * 1000
+
 );
 
 
@@ -3798,10 +5053,15 @@ HEALTH CHECK
 ========================================================= */
 
 app.get(
+
     "/api/health",
+
     (
+
         req,
+
         res
+
     ) => {
 
         res.json({
@@ -3818,6 +5078,7 @@ app.get(
         });
 
     }
+
 );
 
 
@@ -3826,10 +5087,15 @@ STATUS API
 ========================================================= */
 
 app.get(
+
     "/api/status",
+
     (
+
         req,
+
         res
+
     ) => {
 
         res.json({
@@ -3841,7 +5107,7 @@ app.get(
                 "Core Games Accounts",
 
             version:
-                "5.0.0",
+                "5.1.0",
 
             database:
                 "PostgreSQL",
@@ -3858,12 +5124,16 @@ app.get(
             socketIO:
                 true,
 
+            badApples:
+                true,
+
             launcher:
                 LAUNCHER_URL
 
         });
 
     }
+
 );
 
 
@@ -3872,20 +5142,31 @@ FALLBACK
 ========================================================= */
 
 app.use(
+
     (
+
         req,
+
         res
+
     ) => {
 
         res.sendFile(
+
             path.join(
+
                 __dirname,
+
                 "public",
+
                 "index.html"
+
             )
+
         );
 
     }
+
 );
 
 
@@ -3901,55 +5182,96 @@ async function startServer() {
 
 
     server.listen(
+
         PORT,
+
         "0.0.0.0",
+
         () => {
 
             console.log(
 
                 "Core Games Accounts server running on port " +
+
                 PORT
 
             );
 
 
             console.log(
+
                 "Social features enabled."
+
             );
 
 
             console.log(
+
                 "Socket.IO enabled."
+
             );
 
 
             console.log(
+
                 "Cross-site launcher authentication enabled."
+
             );
 
 
             console.log(
+
                 "One-time launcher handoff authentication enabled."
+
             );
 
 
             console.log(
+
+                "Bad Apples+ account linking enabled."
+
+            );
+
+
+            console.log(
+
+                "Bad Apples+ account verification endpoint:"
+
+            );
+
+
+            console.log(
+
+                "GET /api/bad-apples/account"
+
+            );
+
+
+            console.log(
+
                 "Allowed frontend origins:"
+
             );
 
 
             allowedOrigins.forEach(
+
                 origin => {
 
                     console.log(
+
                         " - " +
+
                         origin
+
                     );
 
                 }
+
             );
 
         }
+
     );
 
 }
