@@ -67,13 +67,10 @@ ALLOWED FRONTEND ORIGINS
 ========================================================= */
 
 const allowedOrigins = [
-
     "https://core-launcher-hb1m.onrender.com",
-
     "https://core-accounts.onrender.com",
-
+    "https://bad-apples.onrender.com",
     "http://localhost:3000"
-
 ];
 
 
