@@ -72,7 +72,7 @@ const allowedOrigins = [
 
     "https://core-accounts.onrender.com",
 
-    "http://localhost:3000"
+    "http://localhost:3000",
     
     "https://bad-apples.onrender.com"
 
