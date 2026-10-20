@@ -1,4 +1,3 @@
-
 const express = require("express");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
@@ -72,9 +71,7 @@ const allowedOrigins = [
 
     "https://core-accounts.onrender.com",
 
-    "http://localhost:3000",
-    
-    "https://bad-apples.onrender.com"
+    "http://localhost:3000"
 
 ];
 
@@ -899,9 +896,7 @@ async function getAccountFromSession(
 
         result.rows.length === 0
 
-    ) {
-
-        return null;
+    ) {        return null;
 
     }
 
@@ -1798,9 +1793,7 @@ app.post(
 
                     [
 
-                        username,
-
-                        passwordHash
+                        username,                        passwordHash
 
                     ]
 
@@ -2480,15 +2473,6 @@ app.post(
             );
 
 
-            // Issue a short-lived Core API token so Bad Apples+ can
-            // verify the linked account server-side. Only the token hash
-            // is stored in the database; the raw token is returned once.
-            const apiToken =
-                await createApiTokenForAccount(
-                    account.account_id
-                );
-
-
             client.release();
 
 
@@ -2524,12 +2508,6 @@ app.post(
                         account.created_at
 
                 },
-
-                apiToken:
-                    apiToken.token,
-
-                tokenExpiresAt:
-                    apiToken.expiresAt,
 
                 message:
                     "Bad Apples+ account successfully linked to Core Games account."
@@ -2712,10 +2690,7 @@ app.post(
 
                 });
 
-            }
-
-
-            const account =
+            }            const account =
                 result.rows[0];
 
 
@@ -3614,8 +3589,7 @@ app.post(
                 `
 
                 INSERT INTO friend_requests
-
-                (
+                                (
 
                     sender_id,
 
@@ -4513,9 +4487,7 @@ app.get(
             });
 
 
-        } catch (error) {
-
-            console.error(
+        } catch (error) {            console.error(
 
                 "Message history error:",
 
@@ -4843,7 +4815,7 @@ app.get(
                 authenticated:
                     false,
 
-                game:
+                    game:
                     "Bad Apples+",
 
                 message:
@@ -5352,6 +5324,91 @@ function isUserOnline(
 
 
 /* =========================================================
+CORE PARTIES (IN-MEMORY, ONLINE ONLY)
+========================================================= */
+
+const parties = new Map();
+const accountParty = new Map();
+const pendingPartyInvites = new Map();
+const PARTY_MAX_MEMBERS = 6;
+const PARTY_INVITE_DURATION_MS = 2 * 60 * 1000;
+
+function socketsForAccount(accountId) {
+    const result = [];
+    for (const connectedSocket of io.sockets.sockets.values()) {
+        if (connectedSocket.account && Number(connectedSocket.account.id) === Number(accountId)) {
+            result.push(connectedSocket);
+        }
+    }
+    return result;
+}
+
+function emitToAccount(accountId, eventName, payload) {
+    for (const connectedSocket of socketsForAccount(accountId)) {
+        connectedSocket.emit(eventName, payload);
+    }
+}
+
+function partySnapshot(party, viewerId) {
+    return {
+        partyId: party.id,
+        leaderId: party.leaderId,
+        maxMembers: PARTY_MAX_MEMBERS,
+        members: Array.from(party.members.values()).map(member => ({
+            id: member.id,
+            username: member.username,
+            isLeader: Number(member.id) === Number(party.leaderId),
+            isYou: Number(member.id) === Number(viewerId)
+        }))
+    };
+}
+
+function broadcastParty(party) {
+    if (!party) return;
+    for (const member of party.members.values()) {
+        emitToAccount(member.id, 'partyUpdated', {
+            party: partySnapshot(party, member.id)
+        });
+    }
+}
+
+function sendPartyState(socket) {
+    const partyId = accountParty.get(Number(socket.account.id));
+    const party = partyId ? parties.get(partyId) : null;
+    socket.emit('partyUpdated', {
+        party: party ? partySnapshot(party, socket.account.id) : null
+    });
+}
+
+function removePartyMember(accountId, notify = true) {
+    accountId = Number(accountId);
+    const partyId = accountParty.get(accountId);
+    if (!partyId) return;
+    const party = parties.get(partyId);
+    accountParty.delete(accountId);
+    if (!party) return;    party.members.delete(accountId);
+    if (party.members.size === 0) {
+        parties.delete(partyId);
+        return;
+    }
+    if (Number(party.leaderId) === accountId) {
+        party.leaderId = party.members.keys().next().value;
+    }
+    if (notify) broadcastParty(party);
+    emitToAccount(accountId, 'partyUpdated', { party: null });
+}
+
+function cleanPartyInvites() {
+    const now = Date.now();
+    for (const [accountId, invites] of pendingPartyInvites.entries()) {
+        for (const [partyId, invite] of invites.entries()) {
+            if (invite.expiresAt <= now || !parties.has(partyId)) invites.delete(partyId);
+        }
+        if (invites.size === 0) pendingPartyInvites.delete(accountId);
+    }
+}
+
+/* =========================================================
 SOCKET.IO CONNECTION
 ========================================================= */
 
@@ -5400,6 +5457,149 @@ io.on(
 
         );
 
+        sendPartyState(socket);
+        cleanPartyInvites();
+        const initialInvites = pendingPartyInvites.get(Number(account.id));
+        if (initialInvites) {
+            for (const invite of initialInvites.values()) {
+                socket.emit("partyInviteReceived", {
+                    partyId: invite.partyId,
+                    inviterUsername: invite.inviterUsername,
+                    expiresAt: invite.expiresAt
+                });
+            }
+        }
+
+        socket.on("partyGetState", () => {
+            sendPartyState(socket);
+            cleanPartyInvites();
+            const invites = pendingPartyInvites.get(Number(account.id));
+            if (invites) {
+                for (const invite of invites.values()) {
+                    socket.emit("partyInviteReceived", {
+                        partyId: invite.partyId,
+                        inviterUsername: invite.inviterUsername,
+                        expiresAt: invite.expiresAt
+                    });
+                }
+            }
+        });
+
+        socket.on("partyCreate", () => {
+            try {
+                if (accountParty.has(Number(account.id))) {
+                    return socket.emit("partyError", { message: "You're already in a party." });
+                }
+                const partyId = crypto.randomBytes(4).toString("hex").toUpperCase();
+                const party = {
+                    id: partyId,
+                    leaderId: Number(account.id),
+                    members: new Map([[Number(account.id), {
+                        id: Number(account.id),
+                        username: account.username
+                    }]])
+                };
+                parties.set(partyId, party);
+                accountParty.set(Number(account.id), partyId);
+                broadcastParty(party);
+            } catch (error) {
+                console.error("Party create error:", error);
+                socket.emit("partyError", { message: "Unable to create a party." });
+            }
+        });
+
+        socket.on("partyInvite", async data => {
+            try {
+                const partyId = accountParty.get(Number(account.id));
+                const party = partyId ? parties.get(partyId) : null;
+                if (!party) return socket.emit("partyError", { message: "Create or join a party first." });
+                if (party.members.size >= PARTY_MAX_MEMBERS) return socket.emit("partyError", { message: "Your party is full." });
+                const username = String(data && data.username || "").trim();
+                if (!username || username.length > 32) return socket.emit("partyError", { message: "Enter a valid friend's username." });
+                const found = await pool.query(
+                    "SELECT id, username FROM accounts WHERE LOWER(username) = LOWER($1) LIMIT 1",
+                    [username]
+                );
+                if (!found.rows.length) return socket.emit("partyError", { message: "That account doesn't exist." });
+                const friend = found.rows[0];
+                const friendId = Number(friend.id);
+                if (friendId === Number(account.id)) return socket.emit("partyError", { message: "You can't invite yourself." });
+                const friendship = await pool.query(
+                    "SELECT id FROM friendships WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1) LIMIT 1",
+                    [Number(account.id), friendId]
+                );
+                if (!friendship.rows.length) return socket.emit("partyError", { message: "You can only invite people on your friends list." });
+                if (accountParty.has(friendId)) return socket.emit("partyError", { message: "That friend is already in a party." });
+                const targetSockets = socketsForAccount(friendId);
+                if (!targetSockets.length) return socket.emit("partyError", { message: "That friend is offline." });
+                let invites = pendingPartyInvites.get(friendId);
+                if (!invites) {
+                    invites = new Map();
+                    pendingPartyInvites.set(friendId, invites);
+                }
+                const invite = {
+                    partyId: party.id,
+                    inviterId: Number(account.id),
+                    inviterUsername: account.username,
+                    expiresAt: Date.now() + PARTY_INVITE_DURATION_MS
+                };
+                invites.set(party.id, invite);
+                for (const targetSocket of targetSockets) {
+                    targetSocket.emit("partyInviteReceived", {
+                        partyId: party.id,
+                        inviterUsername: account.username,
+                        expiresAt: invite.expiresAt
+                    });
+                }
+                socket.emit("partyNotice", { message: "Party invitation sent to " + friend.username + "." });
+            } catch (error) {
+                console.error("Party invite error:", error);
+                socket.emit("partyError", { message: "Unable to send that party invitation." });
+            }
+        });
+
+        socket.on("partyRespond", data => {
+            cleanPartyInvites();
+            const partyId = String(data && data.partyId || "").trim().toUpperCase();
+            const accept = Boolean(data && data.accept);
+            const userId = Number(account.id);
+            const invites = pendingPartyInvites.get(userId);
+            const invite = invites && invites.get(partyId);
+            if (!invite) return socket.emit("partyError", { message: "That invitation expired or no longer exists." });
+            invites.delete(partyId);
+            if (invites.size === 0) pendingPartyInvites.delete(userId);
+            if (!accept) {
+                emitToAccount(invite.inviterId, "partyNotice", { message: account.username + " declined your party invitation." });
+                return socket.emit("partyNotice", { message: "Party invitation declined." });
+            }
+            if (accountParty.has(userId)) return socket.emit("partyError", { message: "Leave your current party before joining another." });
+            const party = parties.get(partyId);
+            if (!party) return socket.emit("partyError", { message: "That party no longer exists." });
+            if (party.members.size >= PARTY_MAX_MEMBERS) return socket.emit("partyError", { message: "That party is full." });
+            party.members.set(userId, { id: userId, username: account.username });
+            accountParty.set(userId, partyId);
+            broadcastParty(party);
+            emitToAccount(invite.inviterId, "partyNotice", { message: account.username + " joined your party." });
+        });
+
+        socket.on("partyLeave", () => {
+            removePartyMember(Number(account.id), true);
+        });
+
+        socket.on("partyKick", data => {
+            const partyId = accountParty.get(Number(account.id));
+            const party = partyId ? parties.get(partyId) : null;
+            const targetId = Number(data && data.userId);
+            if (!party || Number(party.leaderId) !== Number(account.id)) return socket.emit("partyError", { message: "Only the party leader can remove members." });
+            if (!Number.isInteger(targetId) || targetId === Number(account.id) || !party.members.has(targetId)) return socket.emit("partyError", { message: "That party member can't be removed." });
+            const removed = party.members.get(targetId);
+            party.members.delete(targetId);
+            accountParty.delete(targetId);
+            emitToAccount(targetId, "partyUpdated", { party: null });
+            emitToAccount(targetId, "partyNotice", { message: "You were removed from the party." });
+            broadcastParty(party);
+            emitToAccount(Number(account.id), "partyNotice", { message: removed.username + " was removed from the party." });
+        });
 
         socket.on(
 
@@ -5760,6 +5960,10 @@ io.on(
 
                 );
 
+                if (!isUserOnline(Number(account.id))) {
+                    removePartyMember(Number(account.id), true);
+                    pendingPartyInvites.delete(Number(account.id));
+                }
 
                 console.log(
 
@@ -5980,9 +6184,7 @@ app.get(
 
     ) => {
 
-        res.json({
-
-            online:
+        res.json({            online:
                 true,
 
             service:
